@@ -18,6 +18,14 @@ void ASCharacter::BeginPlay()
 	
 }
 
+void ASCharacter::MoveForward(float speed) {
+	AddMovementInput(GetActorForwardVector() * speed);
+}
+
+void ASCharacter::MoveRight(float speed) {
+	AddMovementInput(GetActorRightVector() * speed);
+}
+
 // Called every frame
 void ASCharacter::Tick(float DeltaTime)
 {
@@ -30,5 +38,7 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+	PlayerInputComponent->BindAxis("MoveForward", this, &ASCharacter::MoveForward);
+	PlayerInputComponent->BindAxis("MoveRight", this, &ASCharacter::MoveRight);
 }
 
