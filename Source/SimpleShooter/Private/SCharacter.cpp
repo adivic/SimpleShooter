@@ -35,6 +35,7 @@ void ASCharacter::Crouch() {
 	}
 }
 
+
 // Called every frame
 void ASCharacter::Tick(float DeltaTime)
 {
@@ -56,5 +57,6 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ASCharacter::Crouch);
 	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASCharacter::Crouch);
 
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
 }
 
