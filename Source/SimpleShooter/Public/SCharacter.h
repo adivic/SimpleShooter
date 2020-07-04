@@ -23,6 +23,8 @@ protected:
 
 	void MoveRight(float speed);
 
+	void Crouch();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
