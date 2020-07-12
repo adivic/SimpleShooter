@@ -58,7 +58,7 @@ void ASCharacter::Crouch() {
 void ASCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	auto CameraLocation = bIsCrouched ? GetActorLocation().Z + CrouchedEyeHeight : GetActorLocation().Z + BaseEyeHeight;
+	auto CameraLocation = bIsCrouched ? CrouchedEyeHeight : BaseEyeHeight;
 	float CamPos = FMath::FInterpTo(PlayerCamera->GetRelativeLocation().Z, CameraLocation, DeltaTime, 5.f);
 
 	PlayerCamera->SetRelativeLocation(FVector(PlayerCamera->GetRelativeLocation().X, PlayerCamera->GetRelativeLocation().Y, CamPos));
