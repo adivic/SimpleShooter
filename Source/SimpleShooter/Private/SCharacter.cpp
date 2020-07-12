@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/SpringArmComponent.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -13,8 +14,18 @@ ASCharacter::ASCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+	SpringArm->SetupAttachment(GetMesh());
+
+
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
-	PlayerCamera->SetupAttachment(GetMesh());
+	PlayerCamera->SetupAttachment(SpringArm);
+
+	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arms"));
+	MeshComp->SetupAttachment(PlayerCamera);
+
+	
+
 }
 
 // Called when the game starts or when spawned

@@ -22,6 +22,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Component)
 	class UCameraComponent* PlayerCamera;
 
+	UPROPERTY(EditDefaultsOnly, Category = Component)
+	USkeletalMeshComponent* MeshComp;
+
+	UPROPERTY(EditDefaultsOnly, Category = Component)
+	class USpringArmComponent* SpringArm;
+
 	void MoveForward(float speed);
 
 	void MoveRight(float speed);
