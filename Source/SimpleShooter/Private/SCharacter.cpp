@@ -2,7 +2,9 @@
 
 
 #include "SCharacter.h"
+#include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "DrawDebugHelpers.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -10,12 +12,17 @@ ASCharacter::ASCharacter()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+
+	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
+	PlayerCamera->SetupAttachment(GetMesh());
 }
 
 // Called when the game starts or when spawned
 void ASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+
 	
 }
 
@@ -40,7 +47,10 @@ void ASCharacter::Crouch() {
 void ASCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	auto CameraLocation = bIsCrouched ? GetActorLocation().Z + CrouchedEyeHeight : GetActorLocation().Z + BaseEyeHeight;
+	float CamPos = FMath::FInterpTo(PlayerCamera->GetRelativeLocation().Z, CameraLocation, DeltaTime, 5.f);
 
+	PlayerCamera->SetRelativeLocation(FVector(PlayerCamera->GetRelativeLocation().X, PlayerCamera->GetRelativeLocation().Y, CamPos));
 }
 
 // Called to bind functionality to input
