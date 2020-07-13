@@ -6,25 +6,26 @@
 #include "GameFramework/Actor.h"
 #include "SWeapon.generated.h"
 
-USTRUCT()
+UENUM() enum class EFireType : uint8 {Semi, Bolt, Auto, Burst};
+
+USTRUCT(BlueprintType)
 struct FWeaponInfo {
 	GENERATED_BODY()
 
-public:
-	UPROPERTY()
+	//Max Ammo reference
 	int32 MaxAmmoRef;
-
-	UPROPERTY()
+	//Maxammo holding
 	int32 MaxAmmo;
-
-	UPROPERTY()
+	//Bullets in the clip
 	int32 FullClip;
-
-	UPROPERTY()
+	//Ammo in the magazine
 	int32 CurrentAmmo;
-
-	UPROPERTY()
+	//Bullets fired in minute
 	float FireRate;
+	//Damage caused by weapon
+	float Damage;
+	//Weapon Firing type
+	EFireType FireType;
 };
 
 
@@ -44,8 +45,32 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
 	USkeletalMeshComponent* MeshComp;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	class UParticleSystem* MuzzleEffect;
 
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	class USoundCue* FiringSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
+	FWeaponInfo WeaponInfo;
+
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	TSubclassOf<class UDamageType> DamageType;
+
+	//Derived from FireRate;
+	float TimeBetweenShots;
+
+	float LastFiredTime;
+
+	FTimerHandle TimerHandle_FireHandle;
+
+public:	
+
+	virtual void Fire();
+
+	virtual void Reload();
+
+	virtual void StartFire();
+
+	void StopFire();
 };

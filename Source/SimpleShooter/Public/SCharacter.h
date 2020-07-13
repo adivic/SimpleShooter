@@ -28,11 +28,26 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Component)
 	class USpringArmComponent* SpringArm;
 
+	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	class ASWeapon* PlayerWeapon;
+
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	TSubclassOf<ASWeapon> WeaponClass;
+
 	void MoveForward(float speed);
 
 	void MoveRight(float speed);
 
 	void Crouch();
+
+	UFUNCTION()
+	void Fire();
+
+	UFUNCTION()
+	void StopFire();
+
+	UFUNCTION()
+	void ReloadWeapon();
 
 public:	
 	// Called every frame
@@ -40,5 +55,7 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	FORCEINLINE UCameraComponent* GetPlayerCamera() const { return PlayerCamera; }
 
 };

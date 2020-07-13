@@ -6,6 +6,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "DrawDebugHelpers.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "SWeapon.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -23,9 +24,6 @@ ASCharacter::ASCharacter()
 
 	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arms"));
 	MeshComp->SetupAttachment(PlayerCamera);
-
-	
-
 }
 
 // Called when the game starts or when spawned
@@ -33,8 +31,14 @@ void ASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-
-	
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	PlayerWeapon = GetWorld()->SpawnActor<ASWeapon>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+	if (PlayerWeapon) {
+		FName WeaponSocket = FName("R_GunSocket");
+		PlayerWeapon->SetOwner(this);
+		PlayerWeapon->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+	}
 }
 
 void ASCharacter::MoveForward(float speed) {
@@ -47,21 +51,30 @@ void ASCharacter::MoveRight(float speed) {
 
 void ASCharacter::Crouch() {
 	ACharacter::Crouch();
-
+	
 	if (bIsCrouched) {
-		UnCrouch();
+		UnCrouch();	
 	}
 }
 
+void ASCharacter::Fire() {
+	PlayerWeapon->StartFire();
+}
+
+void ASCharacter::StopFire() {
+	PlayerWeapon->StopFire();
+}
+
+void ASCharacter::ReloadWeapon() {
+	PlayerWeapon->Reload();
+}
 
 // Called every frame
 void ASCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	auto CameraLocation = bIsCrouched ? CrouchedEyeHeight : BaseEyeHeight;
-	float CamPos = FMath::FInterpTo(PlayerCamera->GetRelativeLocation().Z, CameraLocation, DeltaTime, 5.f);
-
-	PlayerCamera->SetRelativeLocation(FVector(PlayerCamera->GetRelativeLocation().X, PlayerCamera->GetRelativeLocation().Y, CamPos));
+	FVector DesiredLocation = bIsCrouched ? FVector(0, 0, -CrouchedEyeHeight) : FVector(0);
+	PlayerCamera->SetRelativeLocation(FMath::VInterpTo(PlayerCamera->GetRelativeLocation(), DesiredLocation, DeltaTime, 5.f));
 }
 
 // Called to bind functionality to input
@@ -79,5 +92,10 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASCharacter::Crouch);
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
+
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASCharacter::Fire);
+	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASCharacter::StopFire);
+
+	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASCharacter::ReloadWeapon);
 }
 
