@@ -13,18 +13,25 @@ struct FWeaponInfo {
 	GENERATED_BODY()
 
 	//Max Ammo reference
+	UPROPERTY(EditDefaultsOnly)
 	int32 MaxAmmoRef;
 	//Maxammo holding
+	UPROPERTY(EditDefaultsOnly)
 	int32 MaxAmmo;
 	//Bullets in the clip
+	UPROPERTY(EditDefaultsOnly)
 	int32 FullClip;
 	//Ammo in the magazine
+	UPROPERTY(EditDefaultsOnly)
 	int32 CurrentAmmo;
 	//Bullets fired in minute
+	UPROPERTY(EditDefaultsOnly)
 	float FireRate;
 	//Damage caused by weapon
+	UPROPERTY(EditDefaultsOnly)
 	float Damage;
 	//Weapon Firing type
+	UPROPERTY(EditDefaultsOnly)
 	EFireType FireType;
 };
 

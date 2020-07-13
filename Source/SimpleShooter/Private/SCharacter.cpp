@@ -24,6 +24,8 @@ ASCharacter::ASCharacter()
 
 	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arms"));
 	MeshComp->SetupAttachment(PlayerCamera);
+
+	DefaultFov = PlayerCamera->FieldOfView;
 }
 
 // Called when the game starts or when spawned
@@ -67,14 +69,40 @@ void ASCharacter::StopFire() {
 
 void ASCharacter::ReloadWeapon() {
 	PlayerWeapon->Reload();
+	bReloading = true;
+	if (bReloading) {
+		FTimerHandle TimerHandle_Reload;
+		GetWorldTimerManager().SetTimer(TimerHandle_Reload, this, &ASCharacter::ReloadWeapon, 2.f);
+	} else bReloading = false;
+}
+
+void ASCharacter::Aim() {
+	bAiming = !bAiming;
+}
+
+void ASCharacter::Sprint() {
+	bSprinting = !bSprinting;
+
+	if (bSprinting) {
+		GetCharacterMovement()->MaxWalkSpeed *= 1.5;
+	} else {
+		GetCharacterMovement()->MaxWalkSpeed /= 1.5;
+	}
 }
 
 // Called every frame
 void ASCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	//Crouch
 	FVector DesiredLocation = bIsCrouched ? FVector(0, 0, -CrouchedEyeHeight) : FVector(0);
 	PlayerCamera->SetRelativeLocation(FMath::VInterpTo(PlayerCamera->GetRelativeLocation(), DesiredLocation, DeltaTime, 5.f));
+	
+	//ADS
+	float Fov = bAiming ? AimFov : DefaultFov;
+	float NewFov = FMath::FInterpTo(PlayerCamera->FieldOfView, Fov, DeltaTime, 15.f);
+	PlayerCamera->SetFieldOfView(NewFov);
 }
 
 // Called to bind functionality to input
@@ -97,5 +125,11 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASCharacter::StopFire);
 
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASCharacter::ReloadWeapon);
+
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ASCharacter::Sprint);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ASCharacter::Sprint);
+
+	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &ASCharacter::Aim);
+	PlayerInputComponent->BindAction("Aim", IE_Released, this, &ASCharacter::Aim);
 }
 

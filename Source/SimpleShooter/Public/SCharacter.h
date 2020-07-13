@@ -34,6 +34,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TSubclassOf<ASWeapon> WeaponClass;
 
+	UPROPERTY(BlueprintReadOnly, Category = Player)
+	bool bReloading = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = Player)
+	bool bSprinting = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = Player)
+	bool bAiming = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = Player)
+	float AimFov = 50.f;
+
+	float DefaultFov;
+
 	void MoveForward(float speed);
 
 	void MoveRight(float speed);
@@ -48,6 +62,12 @@ protected:
 
 	UFUNCTION()
 	void ReloadWeapon();
+
+	UFUNCTION()
+	void Aim();
+
+	UFUNCTION()
+	void Sprint();
 
 public:	
 	// Called every frame

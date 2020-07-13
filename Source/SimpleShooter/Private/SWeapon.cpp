@@ -54,7 +54,6 @@ void ASWeapon::Fire() {
 		World->LineTraceSingleByChannel(Hit, EyeLocation, EndTrace, ECC_Visibility, Params);
 		if (Hit.bBlockingHit) {
 			AActor* HitActor = Hit.GetActor();
-			//UE_LOG(LogTemp, Warning, TEXT("Hit: %s"), *HitActor->GetName());
 			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, EyeRotator.Vector(), Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
 		}
 
