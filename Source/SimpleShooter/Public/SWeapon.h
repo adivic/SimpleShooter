@@ -35,6 +35,7 @@ struct FWeaponInfo {
 	EFireType FireType;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnWeaponFire, float, Damage, bool, bIsFiring);
 
 UCLASS()
 class SIMPLESHOOTER_API ASWeapon : public AActor
@@ -53,9 +54,6 @@ protected:
 	USkeletalMeshComponent* MeshComp;
 
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
-	class UParticleSystem* MuzzleEffect;
-
-	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	class USoundCue* FiringSound;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
@@ -64,20 +62,34 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TSubclassOf<class UDamageType> DamageType;
 
-	//Derived from FireRate;
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	TMap<FString, class UAnimMontage*> GunMontages;
+
+	//Derived from WeaponInfo.FireRate;
 	float TimeBetweenShots;
 
 	float LastFiredTime;
 
 	FTimerHandle TimerHandle_FireHandle;
 
+	void FindAndPlayMontage(FString MontageKey);
+
 public:	
 
-	virtual void Fire();
+	// Line trace logic, and animations, same for every weapon type
+	void Fire();
+
+	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	bool bIsFiring = false;
 
 	virtual void Reload();
 
+	// Override in child class to implement different firing logic eg. burst
 	virtual void StartFire();
 
-	void StopFire();
+	virtual void StopFire();
+
+	FORCEINLINE bool GetIsFiring() const { return bIsFiring; }
+
+	FORCEINLINE const FWeaponInfo& GetWeaponInfo() const { return WeaponInfo; }
 };

@@ -26,6 +26,8 @@ ASCharacter::ASCharacter()
 	MeshComp->SetupAttachment(PlayerCamera);
 
 	DefaultFov = PlayerCamera->FieldOfView;
+	GetCharacterMovement()->MaxWalkSpeed = 450.f;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
 }
 
 // Called when the game starts or when spawned
@@ -68,12 +70,17 @@ void ASCharacter::StopFire() {
 }
 
 void ASCharacter::ReloadWeapon() {
-	PlayerWeapon->Reload();
-	bReloading = true;
+	bReloading = !bReloading;
 	if (bReloading) {
-		FTimerHandle TimerHandle_Reload;
-		GetWorldTimerManager().SetTimer(TimerHandle_Reload, this, &ASCharacter::ReloadWeapon, 2.f);
-	} else bReloading = false;
+		FTimerHandle TimerHandle_Reload; 
+		float Delay;
+		if(PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0)
+			Delay = FindAndPlayMontage("Reload_Empty");
+		else 
+			Delay = FindAndPlayMontage("Reload_NotEmpty");
+		PlayerWeapon->Reload();
+		GetWorldTimerManager().SetTimer(TimerHandle_Reload, this, &ASCharacter::ReloadWeapon, Delay);
+	}
 }
 
 void ASCharacter::Aim() {
@@ -90,19 +97,40 @@ void ASCharacter::Sprint() {
 	}
 }
 
+float ASCharacter::FindAndPlayMontage(FString MontageKey) {
+	auto MontageToPlay = PlayerMontages.Find(MontageKey);
+	if (MontageToPlay) {
+		return MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength, 0, false);
+	}
+	return 0;
+}
+
 // Called every frame
 void ASCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 	//Crouch
-	FVector DesiredLocation = bIsCrouched ? FVector(0, 0, -CrouchedEyeHeight) : FVector(0);
+	FVector DesiredLocation = bIsCrouched ? FVector(0, 0, -CrouchedEyeHeight*2) : FVector(0);
 	PlayerCamera->SetRelativeLocation(FMath::VInterpTo(PlayerCamera->GetRelativeLocation(), DesiredLocation, DeltaTime, 5.f));
 	
 	//ADS
 	float Fov = bAiming ? AimFov : DefaultFov;
 	float NewFov = FMath::FInterpTo(PlayerCamera->FieldOfView, Fov, DeltaTime, 15.f);
 	PlayerCamera->SetFieldOfView(NewFov);
+
+	if (PlayerWeapon->GetIsFiring()) {
+		FString Montage1, Montage2;
+		if (bAiming) {
+			Montage1 = "ShootISight_1";
+			Montage2 = "ShootISight_2";
+		} else {
+			Montage1 = "Shoot_1";
+			Montage2 = "Shoot_2";
+		}
+		FindAndPlayMontage(Montage1);
+		FindAndPlayMontage(Montage2);
+	}
 }
 
 // Called to bind functionality to input

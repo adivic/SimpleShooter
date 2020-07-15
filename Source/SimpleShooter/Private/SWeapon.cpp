@@ -4,9 +4,10 @@
 #include "SWeapon.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Sound/SoundCue.h"
-#include "Particles/ParticleSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
+#include "Animation/AnimMontage.h"
+#include "SCharacter.h"
 
 // Sets default values
 ASWeapon::ASWeapon()
@@ -29,7 +30,14 @@ void ASWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	TimeBetweenShots = 60 / WeaponInfo.FireRate;
+	TimeBetweenShots = 60 / WeaponInfo.FireRate; 
+}
+
+void ASWeapon::FindAndPlayMontage(FString MontageKey) {
+	auto MontageToPlay = GunMontages.Find(MontageKey);
+	if (MontageToPlay) {
+		MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay);
+	}
 }
 
 void ASWeapon::Fire() {
@@ -38,7 +46,6 @@ void ASWeapon::Fire() {
 	if (MyOwner && WeaponInfo.CurrentAmmo > 0) {
 		WeaponInfo.CurrentAmmo--;
 
-		//Bullet Spread?
 		FVector EyeLocation;
 		FRotator EyeRotator;
 		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotator);
@@ -60,21 +67,24 @@ void ASWeapon::Fire() {
 		//Debug Line of fire
 		DrawDebugLine(World, EyeLocation, EndTrace, FColor::Red, false, 5.f);
 
-		//Visual Effects
+		//Sound
 		FName SocketName = FName("MuzzleSocket");
 		FVector SocketLocation = MeshComp->GetSocketLocation(SocketName);
-		FRotator SocketRotator = MeshComp->GetSocketRotation(SocketName);
 
-		UGameplayStatics::SpawnEmitterAtLocation(World, MuzzleEffect, SocketLocation, SocketRotator);
 		UGameplayStatics::SpawnSoundAtLocation(World, FiringSound, SocketLocation);
 
 		//Set LastFireTime
 		LastFiredTime = World->TimeSeconds;
+
+		//Play Fire montage
+		FindAndPlayMontage("Fire");
+		
 	}
 }
 
 void ASWeapon::Reload() {
 	if (WeaponInfo.MaxAmmo > 0) {
+		FindAndPlayMontage("Reload");
 		if (WeaponInfo.CurrentAmmo > 0) {
 			int32 AmmoDifference = WeaponInfo.FullClip - WeaponInfo.CurrentAmmo;
 			if (WeaponInfo.MaxAmmo - AmmoDifference >= 0) {
@@ -98,10 +108,12 @@ void ASWeapon::Reload() {
 
 void ASWeapon::StartFire() {
 	float FirstDelay = FMath::Max(LastFiredTime - TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
+	bIsFiring = true;
 	GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, this, &ASWeapon::Fire, TimeBetweenShots, true, FirstDelay);
 }
 
 void ASWeapon::StopFire() {
+	bIsFiring = false;
 	GetWorldTimerManager().ClearTimer(TimerHandle_FireHandle);
 }
 

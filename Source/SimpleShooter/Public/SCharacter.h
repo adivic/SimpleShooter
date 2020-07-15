@@ -34,6 +34,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TSubclassOf<ASWeapon> WeaponClass;
 
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	TMap<FString, class UAnimMontage*> PlayerMontages;
+
 	UPROPERTY(BlueprintReadOnly, Category = Player)
 	bool bReloading = false;
 
@@ -68,6 +71,8 @@ protected:
 
 	UFUNCTION()
 	void Sprint();
+
+	float FindAndPlayMontage(FString MontageKey);
 
 public:	
 	// Called every frame
