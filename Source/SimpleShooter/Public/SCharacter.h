@@ -72,7 +72,19 @@ protected:
 	UFUNCTION()
 	void Sprint();
 
+	UFUNCTION()
+	void ThrowGrenade();
+
+	UPROPERTY(EditDefaultsOnly, Category = Player)
+	TSubclassOf <class ASGrenade> GrenadeActor;
+
 	float FindAndPlayMontage(FString MontageKey);
+
+	UFUNCTION()
+	void ChangeFireMode();
+
+	UFUNCTION()
+	void Melee();
 
 public:	
 	// Called every frame

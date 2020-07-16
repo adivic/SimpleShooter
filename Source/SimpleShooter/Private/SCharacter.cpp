@@ -7,6 +7,7 @@
 #include "DrawDebugHelpers.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "SWeapon.h"
+#include "SGrenade.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -70,16 +71,19 @@ void ASCharacter::StopFire() {
 }
 
 void ASCharacter::ReloadWeapon() {
-	bReloading = !bReloading;
-	if (bReloading) {
-		FTimerHandle TimerHandle_Reload; 
-		float Delay;
-		if(PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0)
-			Delay = FindAndPlayMontage("Reload_Empty");
-		else 
-			Delay = FindAndPlayMontage("Reload_NotEmpty");
-		PlayerWeapon->Reload();
-		GetWorldTimerManager().SetTimer(TimerHandle_Reload, this, &ASCharacter::ReloadWeapon, Delay);
+	if (!PlayerWeapon->IsFullClip()) {
+		bReloading = true;
+		if (bReloading) {
+			FTimerHandle TimerHandle_Reload;
+			if (PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0)
+				 FindAndPlayMontage("Reload_Empty");
+			else
+				FindAndPlayMontage("Reload_NotEmpty");
+			PlayerWeapon->Reload();
+			bReloading = false;
+		}
+	} else {
+		FindAndPlayMontage("BoltCheck");
 	}
 }
 
@@ -97,12 +101,25 @@ void ASCharacter::Sprint() {
 	}
 }
 
+void ASCharacter::ThrowGrenade() {
+	FindAndPlayMontage("Throwing");
+	GetWorld()->SpawnActor<ASGrenade>(GrenadeActor, GetActorLocation(), GetControlRotation());
+}
+
 float ASCharacter::FindAndPlayMontage(FString MontageKey) {
 	auto MontageToPlay = PlayerMontages.Find(MontageKey);
 	if (MontageToPlay) {
 		return MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength, 0, false);
 	}
 	return 0;
+}
+
+void ASCharacter::ChangeFireMode() {
+	PlayerWeapon->ChangeFireMode();
+}
+
+void ASCharacter::Melee() {
+	FindAndPlayMontage("Melee");
 }
 
 // Called every frame
@@ -146,12 +163,10 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ASCharacter::Crouch);
 	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASCharacter::Crouch);
-
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASCharacter::Fire);
 	PlayerInputComponent->BindAction("Fire", IE_Released, this, &ASCharacter::StopFire);
-
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASCharacter::ReloadWeapon);
 
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ASCharacter::Sprint);
@@ -159,5 +174,9 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &ASCharacter::Aim);
 	PlayerInputComponent->BindAction("Aim", IE_Released, this, &ASCharacter::Aim);
+
+	PlayerInputComponent->BindAction("ChangeFireMode", IE_Pressed, this, &ASCharacter::ChangeFireMode);
+	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &ASCharacter::ThrowGrenade);
+	PlayerInputComponent->BindAction("Melee", IE_Pressed, this, &ASCharacter::Melee);
 }
 

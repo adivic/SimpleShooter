@@ -21,7 +21,7 @@ ASWeapon::ASWeapon()
 	WeaponInfo.MaxAmmo = 100;
 	WeaponInfo.MaxAmmoRef = 100;
 	WeaponInfo.Damage = 20;
-	WeaponInfo.FireType = EFireType::Auto;
+	WeaponInfo.FireType = WeaponInfo.AvailableFireTypes[0];
 	WeaponInfo.FireRate = 650;
 }
 
@@ -38,6 +38,20 @@ void ASWeapon::FindAndPlayMontage(FString MontageKey) {
 	if (MontageToPlay) {
 		MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay);
 	}
+}
+
+void ASWeapon::BurstFire(short Bursts) {
+	if (Bursts != 0) {
+		Fire();
+		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASWeapon::BurstFire, --Bursts);
+		GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, RespawnDelegate, .1f, true);
+	}
+}
+
+void ASWeapon::FullAutoFire() {
+	float FirstDelay = FMath::Max(LastFiredTime - TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
+	bIsFiring = true;
+	GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, this, &ASWeapon::Fire, TimeBetweenShots, true, FirstDelay);
 }
 
 void ASWeapon::Fire() {
@@ -107,9 +121,18 @@ void ASWeapon::Reload() {
 }
 
 void ASWeapon::StartFire() {
-	float FirstDelay = FMath::Max(LastFiredTime - TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
-	bIsFiring = true;
-	GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, this, &ASWeapon::Fire, TimeBetweenShots, true, FirstDelay);
+	switch (WeaponInfo.FireType) {
+		case EFireType::Auto:
+			FullAutoFire();
+			break;
+		case EFireType::Burst:
+			BurstFire(3);
+			break;
+		case EFireType::Semi:
+		case EFireType::Bolt:
+			ASWeapon::Fire();
+			break;
+	}
 }
 
 void ASWeapon::StopFire() {
@@ -117,3 +140,12 @@ void ASWeapon::StopFire() {
 	GetWorldTimerManager().ClearTimer(TimerHandle_FireHandle);
 }
 
+void ASWeapon::ChangeFireMode() {
+	if (WeaponInfo.AvailableFireTypes.Num() <= 1) return;
+	short index = WeaponInfo.AvailableFireTypes.Find(WeaponInfo.FireType);
+	if (index+1 < WeaponInfo.AvailableFireTypes.Num()) {
+		WeaponInfo.FireType = WeaponInfo.AvailableFireTypes[++index];
+	} else {
+		WeaponInfo.FireType = WeaponInfo.AvailableFireTypes[0];
+	}
+}

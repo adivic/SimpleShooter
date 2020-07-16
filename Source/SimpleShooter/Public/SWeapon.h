@@ -33,6 +33,9 @@ struct FWeaponInfo {
 	//Weapon Firing type
 	UPROPERTY(EditDefaultsOnly)
 	EFireType FireType;
+
+	UPROPERTY(EditDefaultsOnly)
+	TArray<EFireType> AvailableFireTypes;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnWeaponFire, float, Damage, bool, bIsFiring);
@@ -65,6 +68,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TMap<FString, class UAnimMontage*> GunMontages;
 
+	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	bool bIsFiring = false;
+
 	//Derived from WeaponInfo.FireRate;
 	float TimeBetweenShots;
 
@@ -74,22 +80,26 @@ protected:
 
 	void FindAndPlayMontage(FString MontageKey);
 
+	void BurstFire(short Bursts);
+	
+	void FullAutoFire();
+
 public:	
 
 	// Line trace logic, and animations, same for every weapon type
 	void Fire();
 
-	UPROPERTY(BlueprintReadOnly, Category = Weapon)
-	bool bIsFiring = false;
-
 	virtual void Reload();
 
-	// Override in child class to implement different firing logic eg. burst
 	virtual void StartFire();
 
 	virtual void StopFire();
 
+	void ChangeFireMode();
+
 	FORCEINLINE bool GetIsFiring() const { return bIsFiring; }
 
 	FORCEINLINE const FWeaponInfo& GetWeaponInfo() const { return WeaponInfo; }
+
+	FORCEINLINE bool IsFullClip() const { return WeaponInfo.CurrentAmmo == WeaponInfo.FullClip; }
 };
