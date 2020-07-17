@@ -6,6 +6,9 @@
 #include "GameFramework/Actor.h"
 #include "SGrenade.generated.h"
 
+UENUM()
+enum class EGrenadeType : uint8 {Lethal, Tactical};
+
 UCLASS()
 class SIMPLESHOOTER_API ASGrenade : public AActor
 {
@@ -25,11 +28,23 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = Components)
 	class USphereComponent* SphereCol;
 
-	void Explode();
+	UPROPERTY(EditDefaultsOnly, Category = Grenade)
+	class UParticleSystem* ExplosionEffect;
+
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	class USoundCue* ExplosionSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = Grenade)
+	EGrenadeType GrenadeType;
+
+	UPROPERTY(EditDefaultsOnly, Category = Grenade)
+	float DamageRadius = 500.f;
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	virtual void Explode();
 
 	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 };

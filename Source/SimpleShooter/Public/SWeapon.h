@@ -6,7 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "SWeapon.generated.h"
 
-UENUM() enum class EFireType : uint8 {Semi, Bolt, Auto, Burst};
+UENUM() 
+enum class EFireType : uint8 {Semi, Bolt, Auto, Burst};
 
 USTRUCT(BlueprintType)
 struct FWeaponInfo {
@@ -30,6 +31,9 @@ struct FWeaponInfo {
 	//Damage caused by weapon
 	UPROPERTY(EditDefaultsOnly)
 	float Damage;
+	//Weapon recoil multiplier
+	UPROPERTY(EditDefaultsOnly)
+	float Recoil;
 	//Weapon Firing type
 	UPROPERTY(EditDefaultsOnly)
 	EFireType FireType;
@@ -102,4 +106,6 @@ public:
 	FORCEINLINE const FWeaponInfo& GetWeaponInfo() const { return WeaponInfo; }
 
 	FORCEINLINE bool IsFullClip() const { return WeaponInfo.CurrentAmmo == WeaponInfo.FullClip; }
+
+	FORCEINLINE bool CanReload() const { return WeaponInfo.MaxAmmo > 0; }
 };

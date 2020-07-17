@@ -3,6 +3,8 @@
 
 #include "SGrenade.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 
 // Sets default values
 ASGrenade::ASGrenade()
@@ -19,19 +21,21 @@ ASGrenade::ASGrenade()
 	SphereCol->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	SphereCol->SetCollisionResponseToAllChannels(ECR_Ignore);
 	SphereCol->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	SphereCol->SetSphereRadius(DamageRadius);
 
 	MeshComp->SetSimulatePhysics(true);
+
+	GrenadeType = EGrenadeType::Lethal;
 }
 
 // Called when the game starts or when spawned
 void ASGrenade::BeginPlay()
 {
 	Super::BeginPlay();
-	MeshComp->AddImpulse(GetActorForwardVector() * 5000, NAME_None, true);
-}
+	MeshComp->AddImpulse(GetActorForwardVector() * 2000, NAME_None, true);
 
-void ASGrenade::Explode() {
-
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASGrenade::Explode, 3.f);
 }
 
 // Called every frame
@@ -39,6 +43,16 @@ void ASGrenade::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ASGrenade::Explode() {
+	if (ExplosionSound) {
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
+	}
+	if (ExplosionEffect) {
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+	}
+	Destroy();
 }
 
 void ASGrenade::NotifyActorBeginOverlap(AActor* OtherActor) {

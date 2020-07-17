@@ -73,7 +73,7 @@ void ASCharacter::StopFire() {
 void ASCharacter::ReloadWeapon() {
 	if (!PlayerWeapon->IsFullClip()) {
 		bReloading = true;
-		if (bReloading) {
+		if (PlayerWeapon->CanReload() && bReloading) {
 			FTimerHandle TimerHandle_Reload;
 			if (PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0)
 				 FindAndPlayMontage("Reload_Empty");
@@ -83,6 +83,7 @@ void ASCharacter::ReloadWeapon() {
 			bReloading = false;
 		}
 	} else {
+		bReloading = false;
 		FindAndPlayMontage("BoltCheck");
 	}
 }
@@ -92,18 +93,23 @@ void ASCharacter::Aim() {
 }
 
 void ASCharacter::Sprint() {
-	bSprinting = !bSprinting;
+	if (!bIsCrouched && !bAiming && !bReloading) {
+		bSprinting = !bSprinting;
 
-	if (bSprinting) {
-		GetCharacterMovement()->MaxWalkSpeed *= 1.5;
-	} else {
-		GetCharacterMovement()->MaxWalkSpeed /= 1.5;
+		if (bSprinting) {
+			GetCharacterMovement()->MaxWalkSpeed *= 1.5;
+		} else {
+			GetCharacterMovement()->MaxWalkSpeed /= 1.5;
+		}
 	}
 }
 
 void ASCharacter::ThrowGrenade() {
-	FindAndPlayMontage("Throwing");
-	GetWorld()->SpawnActor<ASGrenade>(GrenadeActor, GetActorLocation(), GetControlRotation());
+	float Delay = FindAndPlayMontage("Throwing");
+	
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Instigator = this;
+	GetWorld()->SpawnActor<ASGrenade>(GrenadeActor, GetActorLocation(), GetControlRotation(), SpawnParams);
 }
 
 float ASCharacter::FindAndPlayMontage(FString MontageKey) {

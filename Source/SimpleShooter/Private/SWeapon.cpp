@@ -8,6 +8,7 @@
 #include "DrawDebugHelpers.h"
 #include "Animation/AnimMontage.h"
 #include "SCharacter.h"
+#include "Camera/CameraComponent.h"
 
 // Sets default values
 ASWeapon::ASWeapon()
@@ -21,8 +22,10 @@ ASWeapon::ASWeapon()
 	WeaponInfo.MaxAmmo = 100;
 	WeaponInfo.MaxAmmoRef = 100;
 	WeaponInfo.Damage = 20;
-	WeaponInfo.FireType = WeaponInfo.AvailableFireTypes[0];
+	WeaponInfo.FireType = EFireType::Auto;
+	WeaponInfo.AvailableFireTypes.Add(WeaponInfo.FireType);
 	WeaponInfo.FireRate = 650;
+	WeaponInfo.Recoil = .4f;
 }
 
 // Called when the game starts or when spawned
@@ -41,6 +44,7 @@ void ASWeapon::FindAndPlayMontage(FString MontageKey) {
 }
 
 void ASWeapon::BurstFire(short Bursts) {
+	//Fix-at
 	if (Bursts != 0) {
 		Fire();
 		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASWeapon::BurstFire, --Bursts);
@@ -56,18 +60,29 @@ void ASWeapon::FullAutoFire() {
 
 void ASWeapon::Fire() {
 	AActor* MyOwner = GetOwner();
+	ASCharacter* MyChar = Cast<ASCharacter>(MyOwner);
 	const UWorld* World = GetWorld();
-	if (MyOwner && WeaponInfo.CurrentAmmo > 0) {
+	if (MyChar && WeaponInfo.CurrentAmmo > 0) {
 		WeaponInfo.CurrentAmmo--;
 
-		FVector EyeLocation;
+		/*FVector EyeLocation;
 		FRotator EyeRotator;
 		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotator);
+		*/
+		auto Camera = MyChar->GetPlayerCamera();
+		FVector EyeLocation = Camera->GetComponentLocation();
+		FRotator EyeRotator = Camera->GetComponentRotation();
 
 		FCollisionQueryParams Params;
 		Params.AddIgnoredActor(MyOwner);
 		Params.AddIgnoredActor(this);
 		Params.bTraceComplex = true;
+
+		//Recoil 
+		float RecoilPitch = WeaponInfo.Recoil * FMath::FRandRange(-.1f, -.5f);
+		MyChar->AddControllerPitchInput(RecoilPitch);
+		float RecoilYaw = WeaponInfo.Recoil * FMath::FRandRange(-.7f, .7f);
+		MyChar->AddControllerYawInput(RecoilYaw);
 		
 		//Cast to ASCharacter?
 		FVector EndTrace = EyeLocation + (EyeRotator.Vector() * 10000.f);
@@ -80,6 +95,7 @@ void ASWeapon::Fire() {
 
 		//Debug Line of fire
 		DrawDebugLine(World, EyeLocation, EndTrace, FColor::Red, false, 5.f);
+		DrawDebugPoint(World, Hit.Location, 20, FColor::Red, false, 5.f);
 
 		//Sound
 		FName SocketName = FName("MuzzleSocket");
@@ -121,6 +137,11 @@ void ASWeapon::Reload() {
 }
 
 void ASWeapon::StartFire() {
+	if (WeaponInfo.CurrentAmmo <= 0) {
+		StopFire();
+		return;
+	}
+
 	switch (WeaponInfo.FireType) {
 		case EFireType::Auto:
 			FullAutoFire();
