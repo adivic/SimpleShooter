@@ -14,35 +14,33 @@ struct FWeaponInfo {
 	GENERATED_BODY()
 
 	//Max Ammo reference
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 MaxAmmoRef;
 	//Maxammo holding
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 MaxAmmo;
 	//Bullets in the clip
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 FullClip;
 	//Ammo in the magazine
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 CurrentAmmo;
 	//Bullets fired in minute
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float FireRate;
 	//Damage caused by weapon
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float Damage;
 	//Weapon recoil multiplier
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float Recoil;
 	//Weapon Firing type
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	EFireType FireType;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<EFireType> AvailableFireTypes;
 };
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnWeaponFire, float, Damage, bool, bIsFiring);
 
 UCLASS()
 class SIMPLESHOOTER_API ASWeapon : public AActor
@@ -60,6 +58,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
 	USkeletalMeshComponent* MeshComp;
 
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
+	//class USphereComponent* MeleeCheck;
+
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	class USoundCue* FiringSound;
 
@@ -74,6 +75,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = Weapon)
 	bool bIsFiring = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
+	float HipFireSpread;
 
 	//Derived from WeaponInfo.FireRate;
 	float TimeBetweenShots;

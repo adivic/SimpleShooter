@@ -43,9 +43,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = Player)
 	bool bSprinting = false;
 
-	UPROPERTY(BlueprintReadOnly, Category = Player)
-	bool bAiming = false;
-
 	UPROPERTY(EditDefaultsOnly, Category = Player)
 	float AimFov = 50.f;
 
@@ -75,6 +72,8 @@ protected:
 	UFUNCTION()
 	void ThrowGrenade();
 
+	void SpawnGrenade();
+
 	UPROPERTY(EditDefaultsOnly, Category = Player)
 	TSubclassOf <class ASGrenade> GrenadeActor;
 
@@ -94,5 +93,8 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	FORCEINLINE UCameraComponent* GetPlayerCamera() const { return PlayerCamera; }
+
+	UPROPERTY(BlueprintReadOnly, Category = Player)
+	bool bAiming = false;
 
 };

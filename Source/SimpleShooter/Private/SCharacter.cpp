@@ -55,10 +55,12 @@ void ASCharacter::MoveRight(float speed) {
 }
 
 void ASCharacter::Crouch() {
-	ACharacter::Crouch();
-	
-	if (bIsCrouched) {
-		UnCrouch();	
+	if (!bSprinting) {
+		ACharacter::Crouch();
+
+		if (bIsCrouched) {
+			UnCrouch();
+		}
 	}
 }
 
@@ -106,10 +108,15 @@ void ASCharacter::Sprint() {
 
 void ASCharacter::ThrowGrenade() {
 	float Delay = FindAndPlayMontage("Throwing");
-	
+	FTimerHandle Timer;
+	GetWorldTimerManager().SetTimer(Timer, this, &ASCharacter::SpawnGrenade, 0.45f);
+}
+
+void ASCharacter::SpawnGrenade() {
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Instigator = this;
-	GetWorld()->SpawnActor<ASGrenade>(GrenadeActor, GetActorLocation(), GetControlRotation(), SpawnParams);
+	FVector HandLocation = MeshComp->GetSocketLocation(FName("hand_l"));
+	GetWorld()->SpawnActor<ASGrenade>(GrenadeActor, HandLocation, GetControlRotation(), SpawnParams);
 }
 
 float ASCharacter::FindAndPlayMontage(FString MontageKey) {
@@ -142,18 +149,19 @@ void ASCharacter::Tick(float DeltaTime)
 	float NewFov = FMath::FInterpTo(PlayerCamera->FieldOfView, Fov, DeltaTime, 15.f);
 	PlayerCamera->SetFieldOfView(NewFov);
 
+	/* Firing Animations Montages
 	if (PlayerWeapon->GetIsFiring()) {
 		FString Montage1, Montage2;
 		if (bAiming) {
 			Montage1 = "ShootISight_1";
-			Montage2 = "ShootISight_2";
+			//Montage2 = "ShootISight_2";
 		} else {
 			Montage1 = "Shoot_1";
 			Montage2 = "Shoot_2";
 		}
 		FindAndPlayMontage(Montage1);
 		FindAndPlayMontage(Montage2);
-	}
+	}*/
 }
 
 // Called to bind functionality to input

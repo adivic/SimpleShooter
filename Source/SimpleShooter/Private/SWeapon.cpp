@@ -9,6 +9,8 @@
 #include "Animation/AnimMontage.h"
 #include "SCharacter.h"
 #include "Camera/CameraComponent.h"
+#include "Components/SphereComponent.h"
+
 
 // Sets default values
 ASWeapon::ASWeapon()
@@ -16,6 +18,11 @@ ASWeapon::ASWeapon()
 	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	RootComponent = MeshComp;
 
+	/*MeleeCheck = CreateDefaultSubobject<USphereComponent>(TEXT("MeleeCheck"));
+	MeleeCheck->SetupAttachment(MeshComp);
+	MeleeCheck->SetSphereRadius(15);
+	MeleeCheck->SetGenerateOverlapEvents(true);
+	*/
 	//Initializing default values
 	WeaponInfo.CurrentAmmo = 30;
 	WeaponInfo.FullClip = 30;
@@ -26,14 +33,15 @@ ASWeapon::ASWeapon()
 	WeaponInfo.AvailableFireTypes.Add(WeaponInfo.FireType);
 	WeaponInfo.FireRate = 650;
 	WeaponInfo.Recoil = .4f;
+
+	HipFireSpread = 4.f;
+	TimeBetweenShots = 60 / WeaponInfo.FireRate;
 }
 
 // Called when the game starts or when spawned
 void ASWeapon::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	TimeBetweenShots = 60 / WeaponInfo.FireRate; 
 }
 
 void ASWeapon::FindAndPlayMontage(FString MontageKey) {
@@ -59,43 +67,47 @@ void ASWeapon::FullAutoFire() {
 }
 
 void ASWeapon::Fire() {
-	AActor* MyOwner = GetOwner();
-	ASCharacter* MyChar = Cast<ASCharacter>(MyOwner);
+	ASCharacter* MyChar = Cast<ASCharacter>(GetOwner());
 	const UWorld* World = GetWorld();
 	if (MyChar && WeaponInfo.CurrentAmmo > 0) {
 		WeaponInfo.CurrentAmmo--;
 
-		/*FVector EyeLocation;
-		FRotator EyeRotator;
-		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotator);
-		*/
 		auto Camera = MyChar->GetPlayerCamera();
 		FVector EyeLocation = Camera->GetComponentLocation();
 		FRotator EyeRotator = Camera->GetComponentRotation();
 
+		FVector Direction = EyeRotator.Vector();
+
+		//HipFire Spread
+		if(!MyChar->bAiming) {
+			float HalfRadius = FMath::DegreesToRadians(HipFireSpread); 
+			Direction = FMath::VRandCone(Direction, HalfRadius);
+		}
+
 		FCollisionQueryParams Params;
-		Params.AddIgnoredActor(MyOwner);
+		Params.AddIgnoredActor(MyChar);
 		Params.AddIgnoredActor(this);
 		Params.bTraceComplex = true;
 
 		//Recoil 
+		//TODO Smoothness 
 		float RecoilPitch = WeaponInfo.Recoil * FMath::FRandRange(-.1f, -.5f);
-		MyChar->AddControllerPitchInput(RecoilPitch);
+		MyChar->AddControllerPitchInput(FMath::FInterpTo(0, RecoilPitch, World->DeltaTimeSeconds, 10));
 		float RecoilYaw = WeaponInfo.Recoil * FMath::FRandRange(-.7f, .7f);
-		MyChar->AddControllerYawInput(RecoilYaw);
+		MyChar->AddControllerYawInput(FMath::FInterpTo(0, RecoilYaw, World->DeltaTimeSeconds, 10));
 		
 		//Cast to ASCharacter?
-		FVector EndTrace = EyeLocation + (EyeRotator.Vector() * 10000.f);
+		FVector EndTrace = EyeLocation + (Direction * 10000.f);
 		FHitResult Hit;
 		World->LineTraceSingleByChannel(Hit, EyeLocation, EndTrace, ECC_Visibility, Params);
 		if (Hit.bBlockingHit) {
 			AActor* HitActor = Hit.GetActor();
-			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, EyeRotator.Vector(), Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
+			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
 		}
 
 		//Debug Line of fire
-		DrawDebugLine(World, EyeLocation, EndTrace, FColor::Red, false, 5.f);
-		DrawDebugPoint(World, Hit.Location, 20, FColor::Red, false, 5.f);
+		DrawDebugLine(World, EyeLocation, Hit.Location, FColor::Red, false, 5.f);
+		DrawDebugPoint(World, Hit.Location, 15, FColor::Red, false, 5.f);
 
 		//Sound
 		FName SocketName = FName("MuzzleSocket");

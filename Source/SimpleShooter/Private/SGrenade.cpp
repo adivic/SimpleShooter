@@ -5,6 +5,7 @@
 #include "Components/SphereComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundCue.h"
+#include "SCharacter.h"
 
 // Sets default values
 ASGrenade::ASGrenade()
@@ -38,14 +39,8 @@ void ASGrenade::BeginPlay()
 	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASGrenade::Explode, 3.f);
 }
 
-// Called every frame
-void ASGrenade::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
 void ASGrenade::Explode() {
+	//Damage Player
 	if (ExplosionSound) {
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
 	}
@@ -54,8 +49,3 @@ void ASGrenade::Explode() {
 	}
 	Destroy();
 }
-
-void ASGrenade::NotifyActorBeginOverlap(AActor* OtherActor) {
-	
-}
-

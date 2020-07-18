@@ -38,13 +38,8 @@ protected:
 	EGrenadeType GrenadeType;
 
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
-	float DamageRadius = 500.f;
+	float DamageRadius = 300.f;
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
 	virtual void Explode();
-
-	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 };
