@@ -86,7 +86,7 @@ protected:
 
 	FTimerHandle TimerHandle_FireHandle;
 
-	void FindAndPlayMontage(FString MontageKey);
+	float FindAndPlayMontage(FString MontageKey);
 
 	void BurstFire(short Bursts);
 	

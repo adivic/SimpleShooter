@@ -31,6 +31,8 @@ ASCharacter::ASCharacter()
 	DefaultFov = PlayerCamera->FieldOfView;
 	GetCharacterMovement()->MaxWalkSpeed = 450.f;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
+
+	SetReplicates(true);
 }
 
 // Called when the game starts or when spawned
@@ -151,19 +153,10 @@ void ASCharacter::Tick(float DeltaTime)
 	float NewFov = FMath::FInterpTo(PlayerCamera->FieldOfView, Fov, DeltaTime, 15.f);
 	PlayerCamera->SetFieldOfView(NewFov);
 
-	/* Firing Animations Montages
-	if (PlayerWeapon->GetIsFiring()) {
-		FString Montage1, Montage2;
-		if (bAiming) {
-			Montage1 = "ShootISight_1";
-			//Montage2 = "ShootISight_2";
-		} else {
-			Montage1 = "Shoot_1";
-			Montage2 = "Shoot_2";
-		}
-		FindAndPlayMontage(Montage1);
-		FindAndPlayMontage(Montage2);
-	}*/
+	if (!IsLocallyControlled()) {
+		auto Pitch = RemoteViewPitch * 360.f / 255.f;
+		Pitch = FMath::ClampAngle(Pitch, -90, 90);
+	}
 }
 
 // Called to bind functionality to input

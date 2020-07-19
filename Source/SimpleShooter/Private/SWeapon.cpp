@@ -36,6 +36,8 @@ ASWeapon::ASWeapon()
 
 	HipFireSpread = 4.f;
 	TimeBetweenShots = 60 / WeaponInfo.FireRate;
+
+	SetReplicates(true);
 }
 
 // Called when the game starts or when spawned
@@ -44,11 +46,12 @@ void ASWeapon::BeginPlay()
 	Super::BeginPlay();
 }
 
-void ASWeapon::FindAndPlayMontage(FString MontageKey) {
+float ASWeapon::FindAndPlayMontage(FString MontageKey) {
 	auto MontageToPlay = GunMontages.Find(MontageKey);
 	if (MontageToPlay) {
-		MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay);
+		return MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength, 0, true);
 	}
+	return 0.f;
 }
 
 void ASWeapon::BurstFire(short Bursts) {
@@ -128,7 +131,7 @@ void ASWeapon::Reload() {
 	if (WeaponInfo.MaxAmmo > 0) {
 		FindAndPlayMontage("Reload");
 		if (WeaponInfo.CurrentAmmo > 0) {
-			int32 AmmoDifference = WeaponInfo.FullClip - WeaponInfo.CurrentAmmo;
+			short AmmoDifference = WeaponInfo.FullClip - WeaponInfo.CurrentAmmo;
 			if (WeaponInfo.MaxAmmo - AmmoDifference >= 0) {
 				WeaponInfo.CurrentAmmo = WeaponInfo.FullClip;
 				WeaponInfo.MaxAmmo -= AmmoDifference;

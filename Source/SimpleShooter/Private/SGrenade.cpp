@@ -45,7 +45,6 @@ void ASGrenade::BeginPlay()
 void ASGrenade::Explode() {
 
 	//FlashBang - https://answers.unrealengine.com/questions/347804/flash-grenade.html
-
 	TArray<TEnumAsByte <EObjectTypeQuery>> ObjectTypes;
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
@@ -68,13 +67,9 @@ void ASGrenade::Explode() {
 					FTimerDelegate FlashDelegate = FTimerDelegate::CreateUObject(PlayerChar, &ASCharacter::FlashbangEffect, false);
 					GetWorldTimerManager().SetTimer(Handle, FlashDelegate, 3.f, false);
 				}
-
-				
 			}
 		}
 	}
-	//TODO Damage Player
-	
 	//Effects
 	if (ExplosionSound) {
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
