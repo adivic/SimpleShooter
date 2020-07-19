@@ -27,7 +27,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = Component)
 	class USpringArmComponent* SpringArm;
-
+	
+	UPROPERTY(EditDefaultsOnly, Category = Component)
+	class UPostProcessComponent* PostProcess;
+	
 	UPROPERTY(BlueprintReadOnly, Category = Weapon)
 	class ASWeapon* PlayerWeapon;
 
@@ -46,6 +49,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Player)
 	float AimFov = 50.f;
 
+	UPROPERTY(EditDefaultsOnly, Category = Player)
+	float MovementSpeed = 1.f;
+
 	float DefaultFov;
 
 	void MoveForward(float speed);
@@ -59,6 +65,9 @@ protected:
 
 	UFUNCTION()
 	void StopFire();
+
+	UFUNCTION()
+	void ChangeFireMode();
 
 	UFUNCTION()
 	void ReloadWeapon();
@@ -80,13 +89,7 @@ protected:
 	float FindAndPlayMontage(FString MontageKey);
 
 	UFUNCTION()
-	void ChangeFireMode();
-
-	UFUNCTION()
 	void Melee();
-
-	UPROPERTY(EditDefaultsOnly, Category = Component)
-	class UPostProcessComponent* PostProcess;
 
 public:	
 	// Called every frame
@@ -101,5 +104,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = Player)
 	bool bAiming = false;
+
+	FORCEINLINE void SetCharacterMovementSpeed(float Speed) { MovementSpeed = Speed; }
 
 };

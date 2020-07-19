@@ -18,11 +18,6 @@ ASWeapon::ASWeapon()
 	MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	RootComponent = MeshComp;
 
-	/*MeleeCheck = CreateDefaultSubobject<USphereComponent>(TEXT("MeleeCheck"));
-	MeleeCheck->SetupAttachment(MeshComp);
-	MeleeCheck->SetSphereRadius(15);
-	MeleeCheck->SetGenerateOverlapEvents(true);
-	*/
 	//Initializing default values
 	WeaponInfo.CurrentAmmo = 30;
 	WeaponInfo.FullClip = 30;
@@ -87,16 +82,10 @@ void ASWeapon::Fire() {
 	const UWorld* World = GetWorld();
 	if (MyChar && WeaponInfo.CurrentAmmo > 0) {
 		WeaponInfo.CurrentAmmo--;
-
+		
 		auto Camera = MyChar->GetPlayerCamera();
-		FVector EyeLocation = Camera->GetComponentLocation();
-		FRotator EyeRotator = Camera->GetComponentRotation();
-
-		FVector SocketLoc = MeshComp->GetSocketLocation("MuzzleSocket");
-		FRotator SocketRot = MeshComp->GetSocketRotation("MuzzleSocket");
-
-		EyeLocation = SocketLoc;
-		EyeRotator = SocketRot;
+		FVector EyeLocation = MyChar->bAiming ? MeshComp->GetSocketLocation("MuzzleSocket") : Camera->GetComponentLocation();
+		FRotator EyeRotator = MyChar->bAiming ? MeshComp->GetSocketRotation("MuzzleSocket") : Camera->GetComponentRotation();
 
 		FVector Direction = EyeRotator.Vector();
 
@@ -126,7 +115,7 @@ void ASWeapon::Fire() {
 			AActor* HitActor = Hit.GetActor();
 			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
 		}
-		UE_LOG(LogTemp, Warning, TEXT("FIREEEEE"));
+
 		//Debug Line of fire
 		DrawDebugLine(World, EyeLocation, Hit.Location, FColor::Red, false, 5.f);
 		DrawDebugPoint(World, Hit.Location, 15, FColor::Red, false, 5.f);
@@ -142,7 +131,6 @@ void ASWeapon::Fire() {
 
 		//Play Fire montage
 		FindAndPlayMontage("Fire");
-		
 	}
 }
 
@@ -187,7 +175,9 @@ void ASWeapon::StartFire() {
 			break;
 		case EFireType::Semi:
 		case EFireType::Bolt:
-			ASWeapon::Fire();
+			bIsFiring = true;
+			Fire();
+			bIsFiring = false;
 			break;
 	}
 }

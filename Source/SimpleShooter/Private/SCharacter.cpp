@@ -51,11 +51,11 @@ void ASCharacter::BeginPlay()
 }
 
 void ASCharacter::MoveForward(float speed) {
-	AddMovementInput(GetActorForwardVector() * speed);
+	AddMovementInput(GetActorForwardVector() * speed* MovementSpeed);
 }
 
 void ASCharacter::MoveRight(float speed) {
-	AddMovementInput(GetActorRightVector() * speed);
+	AddMovementInput(GetActorRightVector() * speed * MovementSpeed);
 }
 
 void ASCharacter::Crouch() {
@@ -76,17 +76,28 @@ void ASCharacter::StopFire() {
 	PlayerWeapon->StopFire();
 }
 
+void ASCharacter::ChangeFireMode() {
+	PlayerWeapon->ChangeFireMode();
+}
+
 void ASCharacter::ReloadWeapon() {
+	if (bReloading) { 
+		bReloading = false;
+		return; 
+	}
+
 	if (!PlayerWeapon->IsFullClip()) {
 		bReloading = true;
 		if (PlayerWeapon->CanReload() && bReloading) {
 			FTimerHandle TimerHandle_Reload;
+			float Delay;
 			if (PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0)
-				 FindAndPlayMontage("Reload_Empty");
+				 Delay = FindAndPlayMontage("Reload_Empty");
 			else
-				FindAndPlayMontage("Reload_NotEmpty");
+				Delay = FindAndPlayMontage("Reload_NotEmpty");
 			PlayerWeapon->Reload();
-			bReloading = false;
+			FTimerHandle Handle;
+			GetWorldTimerManager().SetTimer(Handle, this, &ASCharacter::ReloadWeapon, Delay);
 		}
 	} else {
 		bReloading = false;
@@ -95,7 +106,10 @@ void ASCharacter::ReloadWeapon() {
 }
 
 void ASCharacter::Aim() {
-	bAiming = !bAiming;
+	if (!bAiming && !bReloading && !bSprinting)
+		bAiming = !bAiming;
+	else
+		bAiming = false;
 }
 
 void ASCharacter::Sprint() {
@@ -131,10 +145,6 @@ float ASCharacter::FindAndPlayMontage(FString MontageKey) {
 	return 0;
 }
 
-void ASCharacter::ChangeFireMode() {
-	PlayerWeapon->ChangeFireMode();
-}
-
 void ASCharacter::Melee() {
 	FindAndPlayMontage("Melee");
 	FCollisionShape Shape;
@@ -146,7 +156,7 @@ void ASCharacter::Melee() {
 	GetWorld()->SweepSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (GetActorForwardVector() * 100), FQuat::Identity, ECC_Visibility, Shape, Params);
 	if (Hit.bBlockingHit) {
 		//Damage other player
-		UE_LOG(LogTemp, Warning, TEXT("HIIITTT"));
+		UE_LOG(LogTemp, Warning, TEXT("Melee Hit"));
 	}
 }
 

@@ -6,8 +6,13 @@
 #include "GameFramework/Actor.h"
 #include "SWeapon.generated.h"
 
-UENUM() 
-enum class EFireType : uint8 {Semi, Bolt, Auto, Burst};
+UENUM(BlueprintType) 
+enum class EFireType : uint8 {
+	Semi UMETA(ScriptName = "Semi", DisplayName = "Semi"),
+	Bolt UMETA(ScriptName = "Bolt", DisplayName = "Bolt"),
+	Auto UMETA(ScriptName = "Auto", DisplayName = "Auto"),
+	Burst UMETA(ScriptName = "Burst", DisplayName = "Burst")
+};
 
 USTRUCT(BlueprintType)
 struct FWeaponInfo {
@@ -35,8 +40,8 @@ struct FWeaponInfo {
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float Recoil;
 	//Weapon Firing type
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	EFireType FireType;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	TEnumAsByte<EFireType> FireType;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<EFireType> AvailableFireTypes;
