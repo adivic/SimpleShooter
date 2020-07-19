@@ -54,18 +54,22 @@ float ASWeapon::FindAndPlayMontage(FString MontageKey) {
 	return 0.f;
 }
 
-void ASWeapon::BurstFire(short Bursts) {
+void ASWeapon::BurstFire() {
 	//Fix-at
-	if (Bursts != 0) {
+	if (Burst != 0) {
 		Fire();
-		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASWeapon::BurstFire, --Bursts);
+		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASWeapon::BurstFire, --Burst);
 		GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, RespawnDelegate, .1f, true);
+
+		return;
 	}
+	bIsFiring = false;
+	GetWorldTimerManager().ClearTimer(TimerHandle_FireHandle);
+	Burst = 3;
 }
 
 void ASWeapon::FullAutoFire() {
 	float FirstDelay = FMath::Max(LastFiredTime - TimeBetweenShots - GetWorld()->TimeSeconds, 0.0f);
-	bIsFiring = true;
 	GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, this, &ASWeapon::Fire, TimeBetweenShots, true, FirstDelay);
 }
 
@@ -156,13 +160,15 @@ void ASWeapon::StartFire() {
 		StopFire();
 		return;
 	}
+	bIsFiring = true;
 
 	switch (WeaponInfo.FireType) {
 		case EFireType::Auto:
 			FullAutoFire();
 			break;
 		case EFireType::Burst:
-			BurstFire(3);
+			if (Burst == 3)
+				BurstFire(3);
 			break;
 		case EFireType::Semi:
 		case EFireType::Bolt:
@@ -172,8 +178,10 @@ void ASWeapon::StartFire() {
 }
 
 void ASWeapon::StopFire() {
-	bIsFiring = false;
-	GetWorldTimerManager().ClearTimer(TimerHandle_FireHandle);
+	if (WeaponInfo.FireType != EFireType::Burst) {
+		bIsFiring = false;
+		GetWorldTimerManager().ClearTimer(TimerHandle_FireHandle);
+	}
 }
 
 void ASWeapon::ChangeFireMode() {

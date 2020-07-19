@@ -79,6 +79,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
 	float HipFireSpread;
 
+	short Burst = 3;
+
 	//Derived from WeaponInfo.FireRate;
 	float TimeBetweenShots;
 
@@ -88,7 +90,7 @@ protected:
 
 	float FindAndPlayMontage(FString MontageKey);
 
-	void BurstFire(short Bursts);
+	void BurstFire();
 	
 	void FullAutoFire();
 
