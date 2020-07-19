@@ -137,6 +137,17 @@ void ASCharacter::ChangeFireMode() {
 
 void ASCharacter::Melee() {
 	FindAndPlayMontage("Melee");
+	FCollisionShape Shape;
+	FHitResult Hit;
+	Shape.SetCapsule(40, 60);
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	DrawDebugCapsule(GetWorld(), GetActorLocation() + (GetActorForwardVector() * 100), 60, 40, FQuat::Identity, FColor::Red, false, 4.f);
+	GetWorld()->SweepSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (GetActorForwardVector() * 100), FQuat::Identity, ECC_Visibility, Shape, Params);
+	if (Hit.bBlockingHit) {
+		//Damage other player
+		UE_LOG(LogTemp, Warning, TEXT("HIIITTT"));
+	}
 }
 
 // Called every frame
@@ -154,8 +165,9 @@ void ASCharacter::Tick(float DeltaTime)
 	PlayerCamera->SetFieldOfView(NewFov);
 
 	if (!IsLocallyControlled()) {
-		auto Pitch = RemoteViewPitch * 360.f / 255.f;
-		Pitch = FMath::ClampAngle(Pitch, -90, 90);
+		FRotator NewRot = PlayerCamera->GetRelativeRotation();
+		NewRot.Pitch = RemoteViewPitch * 360.f / 255.0f;
+		PlayerCamera->SetRelativeRotation(NewRot);
 	}
 }
 

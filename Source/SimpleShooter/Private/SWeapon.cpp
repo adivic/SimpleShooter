@@ -46,6 +46,12 @@ void ASWeapon::BeginPlay()
 	Super::BeginPlay();
 }
 
+void ASWeapon::ServerFire_Implementation() {
+	if (GetOwner()->GetLocalRole() < ROLE_Authority) {
+		Fire();
+	}
+}
+
 float ASWeapon::FindAndPlayMontage(FString MontageKey) {
 	auto MontageToPlay = GunMontages.Find(MontageKey);
 	if (MontageToPlay) {
@@ -55,11 +61,11 @@ float ASWeapon::FindAndPlayMontage(FString MontageKey) {
 }
 
 void ASWeapon::BurstFire() {
-	//Fix-at
 	if (Burst != 0) {
 		Fire();
-		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASWeapon::BurstFire, --Burst);
+		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASWeapon::BurstFire);
 		GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, RespawnDelegate, .1f, true);
+		--Burst;
 
 		return;
 	}
@@ -74,6 +80,9 @@ void ASWeapon::FullAutoFire() {
 }
 
 void ASWeapon::Fire() {
+	if (GetOwner()->GetLocalRole() < ROLE_Authority) {
+		ServerFire();
+	}
 	ASCharacter* MyChar = Cast<ASCharacter>(GetOwner());
 	const UWorld* World = GetWorld();
 	if (MyChar && WeaponInfo.CurrentAmmo > 0) {
@@ -82,6 +91,12 @@ void ASWeapon::Fire() {
 		auto Camera = MyChar->GetPlayerCamera();
 		FVector EyeLocation = Camera->GetComponentLocation();
 		FRotator EyeRotator = Camera->GetComponentRotation();
+
+		FVector SocketLoc = MeshComp->GetSocketLocation("MuzzleSocket");
+		FRotator SocketRot = MeshComp->GetSocketRotation("MuzzleSocket");
+
+		EyeLocation = SocketLoc;
+		EyeRotator = SocketRot;
 
 		FVector Direction = EyeRotator.Vector();
 
@@ -111,7 +126,7 @@ void ASWeapon::Fire() {
 			AActor* HitActor = Hit.GetActor();
 			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
 		}
-
+		UE_LOG(LogTemp, Warning, TEXT("FIREEEEE"));
 		//Debug Line of fire
 		DrawDebugLine(World, EyeLocation, Hit.Location, FColor::Red, false, 5.f);
 		DrawDebugPoint(World, Hit.Location, 15, FColor::Red, false, 5.f);
@@ -168,7 +183,7 @@ void ASWeapon::StartFire() {
 			break;
 		case EFireType::Burst:
 			if (Burst == 3)
-				BurstFire(3);
+				BurstFire();
 			break;
 		case EFireType::Semi:
 		case EFireType::Bolt:
@@ -185,7 +200,7 @@ void ASWeapon::StopFire() {
 }
 
 void ASWeapon::ChangeFireMode() {
-	if (WeaponInfo.AvailableFireTypes.Num() <= 1) return;
+	if (WeaponInfo.AvailableFireTypes.Num() <= 1 || bIsFiring) return;
 	short index = WeaponInfo.AvailableFireTypes.Find(WeaponInfo.FireType);
 	if (index+1 < WeaponInfo.AvailableFireTypes.Num()) {
 		WeaponInfo.FireType = WeaponInfo.AvailableFireTypes[++index];

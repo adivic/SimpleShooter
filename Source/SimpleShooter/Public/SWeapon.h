@@ -81,6 +81,9 @@ protected:
 
 	short Burst = 3;
 
+	UFUNCTION(Server, Reliable)
+	void ServerFire();
+
 	//Derived from WeaponInfo.FireRate;
 	float TimeBetweenShots;
 
