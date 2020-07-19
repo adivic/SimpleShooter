@@ -85,6 +85,9 @@ protected:
 	UFUNCTION()
 	void Melee();
 
+	UPROPERTY(EditDefaultsOnly, Category = Component)
+	class UPostProcessComponent* PostProcess;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -93,6 +96,8 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	FORCEINLINE UCameraComponent* GetPlayerCamera() const { return PlayerCamera; }
+
+	 void FlashbangEffect(bool IsFlashed = true);
 
 	UPROPERTY(BlueprintReadOnly, Category = Player)
 	bool bAiming = false;

@@ -38,7 +38,7 @@ protected:
 	EGrenadeType GrenadeType;
 
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
-	float DamageRadius = 300.f;
+	float DamageRadius = 500.f;
 
 public:	
 	virtual void Explode();

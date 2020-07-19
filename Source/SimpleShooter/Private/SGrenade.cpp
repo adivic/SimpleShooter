@@ -6,6 +6,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundCue.h"
 #include "SCharacter.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "DrawDebugHelpers.h"
+
 
 // Sets default values
 ASGrenade::ASGrenade()
@@ -40,7 +43,39 @@ void ASGrenade::BeginPlay()
 }
 
 void ASGrenade::Explode() {
-	//Damage Player
+
+	//FlashBang - https://answers.unrealengine.com/questions/347804/flash-grenade.html
+
+	TArray<TEnumAsByte <EObjectTypeQuery>> ObjectTypes;
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
+	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
+
+	TArray<AActor*> OverlappingActors;
+	UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetActorLocation(), DamageRadius, ObjectTypes, nullptr, TArray<AActor*>(), OverlappingActors);
+	DrawDebugSphere(GetWorld(), GetActorLocation(), DamageRadius, 10, FColor::Red, false, 4);
+	if (OverlappingActors.Num() > 0) {
+		for (AActor* Player: OverlappingActors) {
+			ASCharacter* PlayerChar = Cast<ASCharacter>(GetInstigator());
+			if (PlayerChar) {
+				FRotator DirectionRotation = PlayerChar->GetActorRotation();
+				FVector DirectionVector = DirectionRotation.Vector();
+				DirectionVector.Normalize();
+				FVector LookDirection = GetActorLocation() - PlayerChar->GetActorLocation();
+				
+				if (FVector::DotProduct(DirectionVector, LookDirection) > 0) {
+					PlayerChar->FlashbangEffect(true);
+					FTimerHandle Handle;
+					FTimerDelegate FlashDelegate = FTimerDelegate::CreateUObject(PlayerChar, &ASCharacter::FlashbangEffect, false);
+					GetWorldTimerManager().SetTimer(Handle, FlashDelegate, 3.f, false);
+				}
+
+				
+			}
+		}
+	}
+	//TODO Damage Player
+	
+	//Effects
 	if (ExplosionSound) {
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
 	}

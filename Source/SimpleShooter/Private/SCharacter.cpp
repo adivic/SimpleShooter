@@ -8,6 +8,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "SWeapon.h"
 #include "SGrenade.h"
+#include "Components/PostProcessComponent.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -19,6 +20,7 @@ ASCharacter::ASCharacter()
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 	SpringArm->SetupAttachment(GetMesh());
 
+	PostProcess = CreateDefaultSubobject<UPostProcessComponent>(TEXT("PostPrcoess"));
 
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
 	PlayerCamera->SetupAttachment(SpringArm);
@@ -192,5 +194,14 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("ChangeFireMode", IE_Pressed, this, &ASCharacter::ChangeFireMode);
 	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &ASCharacter::ThrowGrenade);
 	PlayerInputComponent->BindAction("Melee", IE_Pressed, this, &ASCharacter::Melee);
+}
+
+void ASCharacter::FlashbangEffect(bool IsFlashed) {
+	if (IsFlashed) {
+		float FlashEffect = FMath::FInterpTo(PostProcess->BlendWeight, 1, GetWorld()->GetDeltaSeconds(), 20.f);
+		PostProcess->BlendWeight = 1;
+	} else {
+		PostProcess->BlendWeight = 0;
+	}
 }
 
