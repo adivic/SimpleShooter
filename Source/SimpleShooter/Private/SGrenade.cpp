@@ -8,7 +8,7 @@
 #include "SCharacter.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
-
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 ASGrenade::ASGrenade()
@@ -30,6 +30,10 @@ ASGrenade::ASGrenade()
 	MeshComp->SetSimulatePhysics(true);
 
 	GrenadeType = EGrenadeType::Lethal;
+	bExploded = false;
+
+	SetReplicates(true);
+	SetReplicateMovement(true);
 }
 
 // Called when the game starts or when spawned
@@ -39,12 +43,35 @@ void ASGrenade::BeginPlay()
 	MeshComp->AddImpulse(GetActorForwardVector() * 2000, NAME_None, true);
 
 	FTimerHandle TimerHandle;
-	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASGrenade::Explode, 3.f);
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASGrenade::Detonate, 3.f);
+}
+
+void ASGrenade::OnRep_Explode() {
+	FTransform SpawnTransform = FTransform(GetActorRotation(), GetActorLocation(), FVector(4));
+	if (ExplosionSound) {
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
+	}
+	if (ExplosionEffect) {
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, SpawnTransform);
+	}
+	MeshComp->SetHiddenInGame(true);
+}
+
+void ASGrenade::Detonate() {
+	bExploded = true;
+	ServerExplode();
+	OnRep_Explode();
+}
+
+void ASGrenade::ServerExplode_Implementation() {
+	Explode();
 }
 
 void ASGrenade::Explode() {
-
+	
 	//FlashBang - https://answers.unrealengine.com/questions/347804/flash-grenade.html
+	OnRep_Explode();
+
 	TArray<TEnumAsByte <EObjectTypeQuery>> ObjectTypes;
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
@@ -53,14 +80,15 @@ void ASGrenade::Explode() {
 	UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetActorLocation(), DamageRadius, ObjectTypes, nullptr, TArray<AActor*>(), OverlappingActors);
 	DrawDebugSphere(GetWorld(), GetActorLocation(), DamageRadius, 10, FColor::Red, false, 4);
 	if (OverlappingActors.Num() > 0) {
-		for (AActor* Player: OverlappingActors) {
-			ASCharacter* PlayerChar = Cast<ASCharacter>(GetInstigator());
+		for (AActor* PlayerIn : OverlappingActors) {
+			ASCharacter* PlayerChar = Cast<ASCharacter>(PlayerIn);
 			if (PlayerChar) {
+
 				FRotator DirectionRotation = PlayerChar->GetActorRotation();
 				FVector DirectionVector = DirectionRotation.Vector();
 				DirectionVector.Normalize();
 				FVector LookDirection = GetActorLocation() - PlayerChar->GetActorLocation();
-				
+
 				if (FVector::DotProduct(DirectionVector, LookDirection) > 0) {
 					PlayerChar->FlashbangEffect(true);
 					FTimerHandle Handle;
@@ -70,12 +98,11 @@ void ASGrenade::Explode() {
 			}
 		}
 	}
-	//Effects
-	if (ExplosionSound) {
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
-	}
-	if (ExplosionEffect) {
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
-	}
-	Destroy();
+	SetLifeSpan(1.f);
+}
+
+void ASGrenade::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASGrenade, bExploded);
 }

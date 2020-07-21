@@ -22,7 +22,7 @@ void ASMolotov::BeginPlay() {
 }
 
 void ASMolotov::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit) {
-	Explode();
+	ServerExplode();
 	if (ExplosionEffect) {
 		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation(), UKismetMathLibrary::MakeRotFromX(Hit.Normal));
 	}

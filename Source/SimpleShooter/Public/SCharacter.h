@@ -31,7 +31,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Component)
 	class UPostProcessComponent* PostProcess;
 	
-	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	class ASWeapon* PlayerWeapon;
 
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -40,10 +40,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TMap<FString, class UAnimMontage*> PlayerMontages;
 
-	UPROPERTY(BlueprintReadOnly, Category = Player)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = Player)
 	bool bReloading = false;
 
-	UPROPERTY(BlueprintReadOnly, Category = Player)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = Player)
 	bool bSprinting = false;
 
 	UPROPERTY(EditDefaultsOnly, Category = Player)
@@ -69,24 +69,29 @@ protected:
 	UFUNCTION()
 	void ChangeFireMode();
 
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void ReloadWeapon();
 
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void Aim();
 
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void Sprint();
 
 	UFUNCTION()
 	void ThrowGrenade();
 
+	UFUNCTION(Server, Reliable)
 	void SpawnGrenade();
 
 	UPROPERTY(EditDefaultsOnly, Category = Player)
 	TSubclassOf <class ASGrenade> GrenadeActor;
 
-	float FindAndPlayMontage(FString MontageKey);
+	UFUNCTION(NetMulticast, Reliable)
+	void FindAndPlayMontage(const FString& MontageKey);
+
+	UFUNCTION(Server, Reliable)
+	void ServerFindAndPlayMontage(const FString& MontageKey);
 
 	UFUNCTION()
 	void Melee();
@@ -100,11 +105,11 @@ public:
 
 	FORCEINLINE UCameraComponent* GetPlayerCamera() const { return PlayerCamera; }
 
-	 void FlashbangEffect(bool IsFlashed = true);
+	UFUNCTION(Client, Reliable)
+	void FlashbangEffect(bool IsFlashed = true);
 
-	UPROPERTY(BlueprintReadOnly, Category = Player)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = Player)
 	bool bAiming = false;
 
 	FORCEINLINE void SetCharacterMovementSpeed(float Speed) { MovementSpeed = Speed; }
-
 };

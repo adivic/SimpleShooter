@@ -9,6 +9,7 @@
 #include "SWeapon.h"
 #include "SGrenade.h"
 #include "Components/PostProcessComponent.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -48,6 +49,7 @@ void ASCharacter::BeginPlay()
 		PlayerWeapon->SetOwner(this);
 		PlayerWeapon->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
 	}
+	SpringArm->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, "neck_01");
 }
 
 void ASCharacter::MoveForward(float speed) {
@@ -80,7 +82,7 @@ void ASCharacter::ChangeFireMode() {
 	PlayerWeapon->ChangeFireMode();
 }
 
-void ASCharacter::ReloadWeapon() {
+void ASCharacter::ReloadWeapon_Implementation() {
 	if (bReloading) { 
 		bReloading = false;
 		return; 
@@ -90,29 +92,29 @@ void ASCharacter::ReloadWeapon() {
 		bReloading = true;
 		if (PlayerWeapon->CanReload() && bReloading) {
 			FTimerHandle TimerHandle_Reload;
-			float Delay;
+			float Delay = 2.5f; //Get Delay From Animation
 			if (PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0)
-				 Delay = FindAndPlayMontage("Reload_Empty");
+				ServerFindAndPlayMontage("Reload_Empty");
 			else
-				Delay = FindAndPlayMontage("Reload_NotEmpty");
+				ServerFindAndPlayMontage("Reload_NotEmpty");
 			PlayerWeapon->Reload();
 			FTimerHandle Handle;
 			GetWorldTimerManager().SetTimer(Handle, this, &ASCharacter::ReloadWeapon, Delay);
 		}
 	} else {
 		bReloading = false;
-		FindAndPlayMontage("BoltCheck");
+		ServerFindAndPlayMontage("BoltCheck");
 	}
 }
 
-void ASCharacter::Aim() {
+void ASCharacter::Aim_Implementation() {
 	if (!bAiming && !bReloading && !bSprinting)
 		bAiming = !bAiming;
 	else
 		bAiming = false;
 }
 
-void ASCharacter::Sprint() {
+void ASCharacter::Sprint_Implementation() {
 	if (!bIsCrouched && !bAiming && !bReloading) {
 		bSprinting = !bSprinting;
 
@@ -125,28 +127,35 @@ void ASCharacter::Sprint() {
 }
 
 void ASCharacter::ThrowGrenade() {
-	float Delay = FindAndPlayMontage("Throwing");
+	ServerFindAndPlayMontage("Throwing");
 	FTimerHandle Timer;
 	GetWorldTimerManager().SetTimer(Timer, this, &ASCharacter::SpawnGrenade, 0.45f);
 }
 
-void ASCharacter::SpawnGrenade() {
+void ASCharacter::SpawnGrenade_Implementation() {
+	if (GetLocalRole() < ROLE_Authority) return;
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Instigator = this;
 	FVector HandLocation = MeshComp->GetSocketLocation(FName("hand_l"));
 	GetWorld()->SpawnActor<ASGrenade>(GrenadeActor, HandLocation, GetControlRotation(), SpawnParams);
 }
 
-float ASCharacter::FindAndPlayMontage(FString MontageKey) {
+void ASCharacter::FindAndPlayMontage_Implementation(const FString& MontageKey) {
 	auto MontageToPlay = PlayerMontages.Find(MontageKey);
 	if (MontageToPlay) {
-		return MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength, 0, false);
+		USkeletalMeshComponent* SkeletalMesh = Cast<USkeletalMeshComponent>(MeshComp);
+		if (SkeletalMesh) {
+			 SkeletalMesh->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength, 0);
+		}
 	}
-	return 0;
+}
+
+void ASCharacter::ServerFindAndPlayMontage_Implementation(const FString& MontageKey) {
+	FindAndPlayMontage(MontageKey);
 }
 
 void ASCharacter::Melee() {
-	FindAndPlayMontage("Melee");
+	ServerFindAndPlayMontage("Melee"); // 
 	FCollisionShape Shape;
 	FHitResult Hit;
 	Shape.SetCapsule(40, 60);
@@ -166,7 +175,7 @@ void ASCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	//Crouch
-	FVector DesiredLocation = bIsCrouched ? FVector(0, 0, -CrouchedEyeHeight*2) : FVector(0);
+	FVector DesiredLocation = bIsCrouched ? FVector(0, 0, -CrouchedEyeHeight) : FVector(0);
 	PlayerCamera->SetRelativeLocation(FMath::VInterpTo(PlayerCamera->GetRelativeLocation(), DesiredLocation, DeltaTime, 5.f));
 	
 	//ADS
@@ -211,7 +220,7 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Melee", IE_Pressed, this, &ASCharacter::Melee);
 }
 
-void ASCharacter::FlashbangEffect(bool IsFlashed) {
+void ASCharacter::FlashbangEffect_Implementation(bool IsFlashed) {
 	if (IsFlashed) {
 		float FlashEffect = FMath::FInterpTo(PostProcess->BlendWeight, 1, GetWorld()->GetDeltaSeconds(), 20.f);
 		PostProcess->BlendWeight = 1;
@@ -220,3 +229,12 @@ void ASCharacter::FlashbangEffect(bool IsFlashed) {
 	}
 }
 
+void ASCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ASCharacter, PlayerWeapon);
+	DOREPLIFETIME(ASCharacter, bAiming);
+	DOREPLIFETIME(ASCharacter, bReloading);
+	DOREPLIFETIME(ASCharacter, bSprinting);
+
+}

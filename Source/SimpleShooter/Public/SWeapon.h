@@ -14,6 +14,17 @@ enum class EFireType : uint8 {
 	Burst UMETA(ScriptName = "Burst", DisplayName = "Burst")
 };
 
+USTRUCT()
+struct FHitTrace {
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TEnumAsByte<EPhysicalSurface> SurfaceType;
+
+	UPROPERTY()
+	FVector_NetQuantize TraceTo;
+};
+
 USTRUCT(BlueprintType)
 struct FWeaponInfo {
 	GENERATED_BODY()
@@ -69,11 +80,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	class USoundCue* FiringSound;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
 	FWeaponInfo WeaponInfo;
 
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TSubclassOf<class UDamageType> DamageType;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
+	class UParticleSystem* PathEffect;
 
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TMap<FString, class UAnimMontage*> GunMontages;
@@ -84,10 +98,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
 	float HipFireSpread;
 
-	short Burst = 3;
+	UPROPERTY(ReplicatedUsing = OnRep_HitTrace)
+	FHitTrace HitTrace;
 
-	UFUNCTION(Server, Reliable)
-	void ServerFire();
+	short Burst = 3;
 
 	//Derived from WeaponInfo.FireRate;
 	float TimeBetweenShots;
@@ -96,7 +110,18 @@ protected:
 
 	FTimerHandle TimerHandle_FireHandle;
 
-	float FindAndPlayMontage(FString MontageKey);
+	UFUNCTION(Server, Reliable)
+	void ServerFire();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiFindAndPlayMontage(const FString& MontageKey);
+
+	UFUNCTION()
+	void OnRep_HitTrace();
+
+	void PlayFireEffects(FVector TraceEnd);
+
+	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
 
 	void BurstFire();
 	
@@ -107,6 +132,10 @@ public:
 	// Line trace logic, and animations, same for every weapon type
 	void Fire();
 
+	UFUNCTION(Server, Reliable)
+	void ServerPlayMontage(const FString& Key);
+
+	UFUNCTION(Server, Reliable)
 	virtual void Reload();
 
 	virtual void StartFire();

@@ -40,6 +40,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
 	float DamageRadius = 500.f;
 
+	UPROPERTY(ReplicatedUsing=OnRep_Explode)
+	bool bExploded;
+
+	UFUNCTION()
+	void OnRep_Explode();
+
+	void Detonate();
+
+	UFUNCTION(Server, Reliable)
+	void ServerExplode();
+
 public:	
 	virtual void Explode();
+
 };
