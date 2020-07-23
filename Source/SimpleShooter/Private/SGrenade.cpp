@@ -9,6 +9,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
 #include "Net/UnrealNetwork.h"
+#include "Particles/ParticleSystemComponent.h"
 
 // Sets default values
 ASGrenade::ASGrenade()
@@ -41,18 +42,18 @@ void ASGrenade::BeginPlay()
 {
 	Super::BeginPlay();
 	MeshComp->AddImpulse(GetActorForwardVector() * 2000, NAME_None, true);
-
-	FTimerHandle TimerHandle;
-	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASGrenade::Detonate, 3.f);
+	
+	//FTimerHandle TimerHandle;
+	//GetWorldTimerManager().SetTimer(TimerHandle, this, &ASGrenade::Detonate, 3.f);
 }
 
 void ASGrenade::OnRep_Explode() {
-	FTransform SpawnTransform = FTransform(GetActorRotation(), GetActorLocation(), FVector(4));
+	FTransform SpawnTransform = FTransform(GetActorRotation(), GetActorLocation(), FVector(DamageRadius / 100, DamageRadius / 100, 0.5f));
 	if (ExplosionSound) {
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
 	}
 	if (ExplosionEffect) {
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, SpawnTransform);
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, SpawnTransform, true);
 	}
 	MeshComp->SetHiddenInGame(true);
 }
@@ -68,37 +69,7 @@ void ASGrenade::ServerExplode_Implementation() {
 }
 
 void ASGrenade::Explode() {
-	
-	//FlashBang - https://answers.unrealengine.com/questions/347804/flash-grenade.html
-	OnRep_Explode();
-
-	TArray<TEnumAsByte <EObjectTypeQuery>> ObjectTypes;
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
-	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
-
-	TArray<AActor*> OverlappingActors;
-	UKismetSystemLibrary::SphereOverlapActors(GetWorld(), GetActorLocation(), DamageRadius, ObjectTypes, nullptr, TArray<AActor*>(), OverlappingActors);
-	DrawDebugSphere(GetWorld(), GetActorLocation(), DamageRadius, 10, FColor::Red, false, 4);
-	if (OverlappingActors.Num() > 0) {
-		for (AActor* PlayerIn : OverlappingActors) {
-			ASCharacter* PlayerChar = Cast<ASCharacter>(PlayerIn);
-			if (PlayerChar) {
-
-				FRotator DirectionRotation = PlayerChar->GetActorRotation();
-				FVector DirectionVector = DirectionRotation.Vector();
-				DirectionVector.Normalize();
-				FVector LookDirection = GetActorLocation() - PlayerChar->GetActorLocation();
-
-				if (FVector::DotProduct(DirectionVector, LookDirection) > 0) {
-					PlayerChar->FlashbangEffect(true);
-					FTimerHandle Handle;
-					FTimerDelegate FlashDelegate = FTimerDelegate::CreateUObject(PlayerChar, &ASCharacter::FlashbangEffect, false);
-					GetWorldTimerManager().SetTimer(Handle, FlashDelegate, 3.f, false);
-				}
-			}
-		}
-	}
-	SetLifeSpan(1.f);
+	//Override in child class
 }
 
 void ASGrenade::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {

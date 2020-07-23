@@ -9,6 +9,8 @@
 UENUM()
 enum class EGrenadeType : uint8 {Lethal, Tactical};
 
+class USphereComponent;
+
 UCLASS()
 class SIMPLESHOOTER_API ASGrenade : public AActor
 {
@@ -26,7 +28,7 @@ protected:
 	UStaticMeshComponent* MeshComp;
 
 	UPROPERTY(VisibleAnywhere, Category = Components)
-	class USphereComponent* SphereCol;
+	USphereComponent* SphereCol;
 
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
 	class UParticleSystem* ExplosionEffect;
@@ -38,6 +40,9 @@ protected:
 	EGrenadeType GrenadeType;
 
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
+	TSubclassOf<class UDamageType> DamageType;
+
+	UPROPERTY(EditDefaultsOnly, Category = Grenade)
 	float DamageRadius = 500.f;
 
 	UPROPERTY(ReplicatedUsing=OnRep_Explode)
@@ -46,12 +51,11 @@ protected:
 	UFUNCTION()
 	void OnRep_Explode();
 
-	void Detonate();
-
 	UFUNCTION(Server, Reliable)
 	void ServerExplode();
 
 public:	
 	virtual void Explode();
 
+	void Detonate();
 };

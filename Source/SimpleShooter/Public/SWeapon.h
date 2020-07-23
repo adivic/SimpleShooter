@@ -8,10 +8,10 @@
 
 UENUM(BlueprintType) 
 enum class EFireType : uint8 {
-	Semi UMETA(ScriptName = "Semi", DisplayName = "Semi"),
-	Bolt UMETA(ScriptName = "Bolt", DisplayName = "Bolt"),
-	Auto UMETA(ScriptName = "Auto", DisplayName = "Auto"),
-	Burst UMETA(ScriptName = "Burst", DisplayName = "Burst")
+	Semi UMETA(DisplayName = "Semi"),
+	Bolt UMETA(DisplayName = "Bolt"),
+	Auto UMETA(DisplayName = "Auto"),
+	Burst UMETA(DisplayName = "Burst")
 };
 
 USTRUCT()
@@ -110,7 +110,7 @@ protected:
 
 	FTimerHandle TimerHandle_FireHandle;
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerFire();
 
 	UFUNCTION(NetMulticast, Reliable)
@@ -132,10 +132,8 @@ public:
 	// Line trace logic, and animations, same for every weapon type
 	void Fire();
 
-	UFUNCTION(Server, Reliable)
 	void ServerPlayMontage(const FString& Key);
 
-	UFUNCTION(Server, Reliable)
 	virtual void Reload();
 
 	virtual void StartFire();

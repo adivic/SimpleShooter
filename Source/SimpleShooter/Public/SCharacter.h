@@ -25,6 +25,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Component)
 	USkeletalMeshComponent* MeshComp;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
+	class USHealthComponent* HealthComponent;
+
 	UPROPERTY(EditDefaultsOnly, Category = Component)
 	class USpringArmComponent* SpringArm;
 	
@@ -52,6 +55,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Player)
 	float MovementSpeed = 1.f;
 
+	UPROPERTY(BlueprintReadOnly, Category = Player)
+	bool bDead;
+
+	UPROPERTY(BlueprintReadOnly, Category = Player)
+	FRotator AimPitch;
+
 	float DefaultFov;
 
 	void MoveForward(float speed);
@@ -78,7 +87,7 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Sprint();
 
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void ThrowGrenade();
 
 	UFUNCTION(Server, Reliable)
@@ -90,11 +99,16 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void FindAndPlayMontage(const FString& MontageKey);
 
-	UFUNCTION(Server, Reliable)
 	void ServerFindAndPlayMontage(const FString& MontageKey);
 
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void Melee();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void UpdateBloodyHands(float Health);
+	
+	UFUNCTION()
+	void OnHealthChanged(USHealthComponent* HealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 
 public:	
 	// Called every frame

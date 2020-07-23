@@ -48,6 +48,10 @@ void ASWeapon::ServerFire_Implementation() {
 	Fire();
 }
 
+bool ASWeapon::ServerFire_Validate() {
+	return true;
+}
+
 void ASWeapon::OnRep_HitTrace() {
 	PlayFireEffects(HitTrace.TraceTo);
 	//SpawnImpactEffects(HitTrace.SurfaceType, HitTrace.TraceTo);
@@ -73,14 +77,23 @@ void ASWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoi
 
 void ASWeapon::MultiFindAndPlayMontage_Implementation(const FString& MontageKey) {
 	auto MontageToPlay = GunMontages.Find(MontageKey);
+	float Delay;
 	if (MontageToPlay) {
-		MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay);
+		Delay = MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength);
+	}
+	if (MontageKey.Equals("Reload")) {
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, this, &ASWeapon::Reload, Delay);
 	}
 }
 
-void ASWeapon::ServerPlayMontage_Implementation(const FString& Key) {
+void ASWeapon::ServerPlayMontage(const FString& Key) {
 	MultiFindAndPlayMontage(Key);
 }
+
+/*bool ASWeapon::ServerPlayMontage_Validate(const FString& Key) {
+	return !Key.IsEmpty();
+}*/
 
 void ASWeapon::BurstFire() {
 	if (Burst != 0) {
@@ -130,13 +143,11 @@ void ASWeapon::Fire() {
 		Params.bReturnPhysicalMaterial = true;
 
 		//Recoil 
-		//TODO Smoothness 
 		float RecoilPitch = WeaponInfo.Recoil * FMath::FRandRange(-.1f, -.5f);
 		MyChar->AddControllerPitchInput(FMath::FInterpTo(0, RecoilPitch, World->DeltaTimeSeconds, 10));
 		float RecoilYaw = WeaponInfo.Recoil * FMath::FRandRange(-.7f, .7f);
 		MyChar->AddControllerYawInput(FMath::FInterpTo(0, RecoilYaw, World->DeltaTimeSeconds, 10));
 		
-		//Cast to ASCharacter?
 		FVector EndTrace = EyeLocation + (Direction * 10000.f);
 		FVector TraceEndPoint = EndTrace;
 		EPhysicalSurface SurfaceType = SurfaceType_Default;
@@ -146,9 +157,9 @@ void ASWeapon::Fire() {
 			TraceEndPoint = Hit.ImpactPoint;
 			AActor* HitActor = Hit.GetActor();
 			SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
-			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
 
-			//PLayImpactEffect(SurfaceType, Hit.ImpactPoint);
+			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
+			//PlayImpactEffect(SurfaceType, Hit.ImpactPoint);
 		}
 
 		//Debug Line of fire
@@ -168,9 +179,8 @@ void ASWeapon::Fire() {
 	}
 }
 
-void ASWeapon::Reload_Implementation() {
+void ASWeapon::Reload() {
 	if (WeaponInfo.MaxAmmo > 0) {
-		ServerPlayMontage("Reload");
 		if (WeaponInfo.CurrentAmmo > 0) {
 			short AmmoDifference = WeaponInfo.FullClip - WeaponInfo.CurrentAmmo;
 			if (WeaponInfo.MaxAmmo - AmmoDifference >= 0) {

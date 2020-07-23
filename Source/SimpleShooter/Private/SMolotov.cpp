@@ -4,7 +4,10 @@
 #include "SMolotov.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundCue.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "SCharacter.h"
+#include "DrawDebugHelpers.h"
+#include "Components/SphereComponent.h"
+#include "GameFramework/Volume.h"
 
 ASMolotov::ASMolotov() {
 	
@@ -18,21 +21,34 @@ void ASMolotov::BeginPlay() {
 	MeshComp->AddImpulse(GetActorForwardVector() * 2000, NAME_None, true);
 	MeshComp->OnComponentHit.AddDynamic(this, &ASMolotov::OnHit);
 	MeshComp->SetGenerateOverlapEvents(true);
-	MeshComp->SetNotifyRigidBodyCollision(true);
+	MeshComp->SetNotifyRigidBodyCollision(true);	
+
+	SphereCol->SetNotifyRigidBodyCollision(true);
+	SphereCol->OnComponentBeginOverlap.AddDynamic(this, &ASMolotov::OnOverlapBegin);
+	SphereCol->OnComponentEndOverlap.AddDynamic(this, &ASMolotov::OnOverlapEnd);
+}
+
+void ASMolotov::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
+	UE_LOG(LogTemp, Warning, TEXT("Overlap begin"));
+	bIsOverlapp = true;
+}
+
+void ASMolotov::OnOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) {
+	UE_LOG(LogTemp, Warning, TEXT("Overlap End"));
+	bIsOverlapp = false;
 }
 
 void ASMolotov::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit) {
-	ServerExplode();
-	if (ExplosionEffect) {
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation(), UKismetMathLibrary::MakeRotFromX(Hit.Normal));
-	}
+	
+	Explode();
 }
 
 void ASMolotov::Explode() {
-	//Effects
-	if (ExplosionSound) {
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
+	if (!bExploded) {
+		bExploded = true;
+		ServerExplode();
+		OnRep_Explode();
+		SetLifeSpan(5.f);
 	}
-	
-	Destroy();
 }
+

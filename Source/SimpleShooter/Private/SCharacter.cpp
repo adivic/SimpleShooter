@@ -8,8 +8,12 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "SWeapon.h"
 #include "SGrenade.h"
+#include "Kismet/GameplayStatics.h"
+#include "SHealthComponent.h"
 #include "Components/PostProcessComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/CapsuleComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -23,6 +27,8 @@ ASCharacter::ASCharacter()
 
 	PostProcess = CreateDefaultSubobject<UPostProcessComponent>(TEXT("PostPrcoess"));
 
+	HealthComponent = CreateDefaultSubobject<USHealthComponent>(TEXT("HealthComponent"));
+
 	PlayerCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
 	PlayerCamera->SetupAttachment(SpringArm);
 
@@ -33,6 +39,8 @@ ASCharacter::ASCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = 450.f;
 	GetCharacterMovement()->MaxWalkSpeedCrouched = 200.f;
 
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
+	
 	SetReplicates(true);
 }
 
@@ -41,15 +49,19 @@ void ASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	PlayerWeapon = GetWorld()->SpawnActor<ASWeapon>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
-	if (PlayerWeapon) {
-		FName WeaponSocket = FName("R_GunSocket");
-		PlayerWeapon->SetOwner(this);
-		PlayerWeapon->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+	HealthComponent->OnHealthChanged.AddDynamic(this, &ASCharacter::OnHealthChanged);
+
+	if (GetLocalRole() == ROLE_Authority) {
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		PlayerWeapon = GetWorld()->SpawnActor<ASWeapon>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+		if (PlayerWeapon) {
+			FName WeaponSocket = FName("R_GunSocket");
+			PlayerWeapon->SetOwner(this);
+			PlayerWeapon->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+		}
 	}
-	SpringArm->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, "neck_01");
+	SpringArm->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, "head");
 }
 
 void ASCharacter::MoveForward(float speed) {
@@ -97,7 +109,7 @@ void ASCharacter::ReloadWeapon_Implementation() {
 				ServerFindAndPlayMontage("Reload_Empty");
 			else
 				ServerFindAndPlayMontage("Reload_NotEmpty");
-			PlayerWeapon->Reload();
+			PlayerWeapon->ServerPlayMontage("Reload");
 			FTimerHandle Handle;
 			GetWorldTimerManager().SetTimer(Handle, this, &ASCharacter::ReloadWeapon, Delay);
 		}
@@ -126,7 +138,7 @@ void ASCharacter::Sprint_Implementation() {
 	}
 }
 
-void ASCharacter::ThrowGrenade() {
+void ASCharacter::ThrowGrenade_Implementation() {
 	ServerFindAndPlayMontage("Throwing");
 	FTimerHandle Timer;
 	GetWorldTimerManager().SetTimer(Timer, this, &ASCharacter::SpawnGrenade, 0.45f);
@@ -150,12 +162,12 @@ void ASCharacter::FindAndPlayMontage_Implementation(const FString& MontageKey) {
 	}
 }
 
-void ASCharacter::ServerFindAndPlayMontage_Implementation(const FString& MontageKey) {
+void ASCharacter::ServerFindAndPlayMontage(const FString& MontageKey) {
 	FindAndPlayMontage(MontageKey);
 }
 
-void ASCharacter::Melee() {
-	ServerFindAndPlayMontage("Melee"); // 
+void ASCharacter::Melee_Implementation() {
+	ServerFindAndPlayMontage("Melee");
 	FCollisionShape Shape;
 	FHitResult Hit;
 	Shape.SetCapsule(40, 60);
@@ -164,8 +176,37 @@ void ASCharacter::Melee() {
 	DrawDebugCapsule(GetWorld(), GetActorLocation() + (GetActorForwardVector() * 100), 60, 40, FQuat::Identity, FColor::Red, false, 4.f);
 	GetWorld()->SweepSingleByChannel(Hit, GetActorLocation(), GetActorLocation() + (GetActorForwardVector() * 100), FQuat::Identity, ECC_Visibility, Shape, Params);
 	if (Hit.bBlockingHit) {
-		//Damage other player
-		UE_LOG(LogTemp, Warning, TEXT("Melee Hit"));
+		const float HitDamage = 45.f;
+		UGameplayStatics::ApplyDamage(Hit.GetActor(), HitDamage, GetController(), this, TSubclassOf<class UDamageType>());
+	}
+}
+
+void ASCharacter::UpdateBloodyHands_Implementation(float Health) {
+	UMaterialInstanceDynamic* MI = MeshComp->CreateDynamicMaterialInstance(0);
+	if (MI) {
+		MeshComp->SetMaterial(0, MI);
+		MI->SetScalarParameterValue(TEXT("HealthValue"), 100 - Health);
+	}
+
+}
+
+void ASCharacter::OnHealthChanged(USHealthComponent* HealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser) {
+	
+	UpdateBloodyHands(Health);
+	
+	UE_LOG(LogTemp, Error, TEXT("Health ==> %f"), Health);
+	
+	if (Health < 0.f && !bDead) {
+		bDead = true;
+
+		
+
+		GetMovementComponent()->StopMovementImmediately();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		PlayerWeapon->StopFire();
+		DetachFromControllerPendingDestroy();
+
+		SetLifeSpan(10.f);
 	}
 }
 
@@ -184,9 +225,9 @@ void ASCharacter::Tick(float DeltaTime)
 	PlayerCamera->SetFieldOfView(NewFov);
 
 	if (!IsLocallyControlled()) {
-		FRotator NewRot = PlayerCamera->GetRelativeRotation();
-		NewRot.Pitch = RemoteViewPitch * 360.f / 255.0f;
-		PlayerCamera->SetRelativeRotation(NewRot);
+		AimPitch = PlayerCamera->GetRelativeRotation();
+		AimPitch.Pitch = FMath::ClampAngle(RemoteViewPitch * 360.f / 255.0f, -90, 90);
+		PlayerCamera->SetRelativeRotation(AimPitch);
 	}
 }
 
