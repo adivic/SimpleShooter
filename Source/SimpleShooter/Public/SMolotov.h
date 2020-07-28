@@ -22,6 +22,8 @@ protected:
 	virtual void BeginPlay() override;
 
 	bool bIsOverlapp;
+	
+	bool bActive;
 
 	UFUNCTION()
 	void OnOverlapBegin(class UPrimitiveComponent* OverlappedComp, AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -32,6 +34,15 @@ protected:
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
 
+	UFUNCTION()
+	void TakeFireDamage(AActor* DamagedActor, float BaseDamage);
+
+	TArray<AActor*> OverlappingActors;
+
+	TArray<FTimerHandle> ActorHandles;
+
 public:
 	virtual void Explode() override; 
+
+	//virtual void Tick
 };

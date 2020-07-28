@@ -27,9 +27,6 @@ ASGrenade::ASGrenade()
 	SphereCol->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	SphereCol->SetCollisionResponseToAllChannels(ECR_Ignore);
 	SphereCol->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-	SphereCol->SetSphereRadius(DamageRadius);
-
-	
 
 	GrenadeType = EGrenadeType::Lethal;
 	bExploded = false;
@@ -42,6 +39,7 @@ ASGrenade::ASGrenade()
 void ASGrenade::BeginPlay()
 {
 	Super::BeginPlay();
+	SphereCol->SetSphereRadius(DamageRadius);
 	MeshComp->AddImpulse(GetActorForwardVector() * 2000, NAME_None, true);
 }
 
