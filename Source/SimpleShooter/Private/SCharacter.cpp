@@ -65,11 +65,11 @@ void ASCharacter::BeginPlay()
 }
 
 void ASCharacter::MoveForward(float speed) {
-	AddMovementInput(GetActorForwardVector() * speed* MovementSpeed);
+	AddMovementInput(GetActorForwardVector() * speed);
 }
 
 void ASCharacter::MoveRight(float speed) {
-	AddMovementInput(GetActorRightVector() * speed * MovementSpeed);
+	AddMovementInput(GetActorRightVector() * speed);
 }
 
 void ASCharacter::Crouch() {

@@ -33,7 +33,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
 	class UParticleSystem* ExplosionEffect;
 
-	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	UPROPERTY(EditDefaultsOnly, Category = Grenade)
 	class USoundCue* ExplosionSound;
 
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
@@ -45,14 +45,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Grenade)
 	float DamageRadius = 500.f;
 
-	UPROPERTY(ReplicatedUsing=OnRep_Explode)
+	//UPROPERTY(ReplicatedUsing=OnRep_Explode)
+	UPROPERTY(Replicated)
 	bool bExploded;
 
-	UFUNCTION()
-	void OnRep_Explode();
+	//UFUNCTION()
+	//void OnRep_Explode();
 
-	UFUNCTION(Server, Reliable)
-	void ServerExplode();
+	UFUNCTION(NetMulticast, Reliable)
+	void MultiExplode();
 
 public:	
 	virtual void Explode();

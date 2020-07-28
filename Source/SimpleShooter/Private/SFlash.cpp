@@ -20,7 +20,7 @@ void ASFlash::BeginPlay() {
 void ASFlash::Explode() {
 
 	//FlashBang - https://answers.unrealengine.com/questions/347804/flash-grenade.html
-	OnRep_Explode();
+	//MultiExplode();
 
 	TArray<TEnumAsByte <EObjectTypeQuery>> ObjectTypes;
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));

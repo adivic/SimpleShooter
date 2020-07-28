@@ -46,8 +46,7 @@ void ASMolotov::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPr
 void ASMolotov::Explode() {
 	if (!bExploded) {
 		bExploded = true;
-		ServerExplode();
-		OnRep_Explode();
+		Explode();
 		SetLifeSpan(5.f);
 	}
 }

@@ -52,9 +52,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Player)
 	float AimFov = 50.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = Player)
-	float MovementSpeed = 1.f;
-
 	UPROPERTY(BlueprintReadOnly, Category = Player)
 	bool bDead;
 
@@ -124,6 +121,4 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = Player)
 	bool bAiming = false;
-
-	FORCEINLINE void SetCharacterMovementSpeed(float Speed) { MovementSpeed = Speed; }
 };

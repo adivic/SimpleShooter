@@ -18,6 +18,7 @@ ASGrenade::ASGrenade()
 	PrimaryActorTick.bCanEverTick = true;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Grenade"));
+	MeshComp->SetSimulatePhysics(true);
 	RootComponent = MeshComp;
 
 	SphereCol = CreateDefaultSubobject<USphereComponent>(TEXT("BlastCollision"));
@@ -28,7 +29,7 @@ ASGrenade::ASGrenade()
 	SphereCol->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	SphereCol->SetSphereRadius(DamageRadius);
 
-	MeshComp->SetSimulatePhysics(true);
+	
 
 	GrenadeType = EGrenadeType::Lethal;
 	bExploded = false;
@@ -42,12 +43,20 @@ void ASGrenade::BeginPlay()
 {
 	Super::BeginPlay();
 	MeshComp->AddImpulse(GetActorForwardVector() * 2000, NAME_None, true);
-	
-	//FTimerHandle TimerHandle;
-	//GetWorldTimerManager().SetTimer(TimerHandle, this, &ASGrenade::Detonate, 3.f);
 }
 
-void ASGrenade::OnRep_Explode() {
+/*void ASGrenade::OnRep_Explode() {
+	FTransform SpawnTransform = FTransform(GetActorRotation(), GetActorLocation(), FVector(DamageRadius / 100, DamageRadius / 100, 0.5f));
+	if (ExplosionSound) {
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
+	}
+	if (ExplosionEffect) {
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, SpawnTransform, true);
+	}
+	MeshComp->SetHiddenInGame(true);
+}*/
+
+void ASGrenade::MultiExplode_Implementation() {
 	FTransform SpawnTransform = FTransform(GetActorRotation(), GetActorLocation(), FVector(DamageRadius / 100, DamageRadius / 100, 0.5f));
 	if (ExplosionSound) {
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(), ExplosionSound, GetActorLocation());
@@ -60,12 +69,8 @@ void ASGrenade::OnRep_Explode() {
 
 void ASGrenade::Detonate() {
 	bExploded = true;
-	ServerExplode();
-	OnRep_Explode();
-}
-
-void ASGrenade::ServerExplode_Implementation() {
 	Explode();
+	MultiExplode();
 }
 
 void ASGrenade::Explode() {
