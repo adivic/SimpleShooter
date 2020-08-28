@@ -104,12 +104,17 @@ void ASCharacter::ReloadWeapon_Implementation() {
 		bReloading = true;
 		if (PlayerWeapon->CanReload() && bReloading) {
 			FTimerHandle TimerHandle_Reload;
-			float Delay = 2.5f; //Get Delay From Animation
-			if (PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0)
+			FString GunName = PlayerWeapon->GetName();
+			float Delay = 2.5f; //TODO Get Delay From Animation
+			if (PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0) {
 				ServerFindAndPlayMontage("Reload_Empty");
-			else
+				PlayerWeapon->ServerPlayMontage("ReloadEmpty");
+			}
+			else {
 				ServerFindAndPlayMontage("Reload_NotEmpty");
-			PlayerWeapon->ServerPlayMontage("Reload");
+				PlayerWeapon->ServerPlayMontage("Reload");
+			}
+			bAiming = false;
 			FTimerHandle Handle;
 			GetWorldTimerManager().SetTimer(Handle, this, &ASCharacter::ReloadWeapon, Delay);
 		}
@@ -135,7 +140,7 @@ void ASCharacter::Sprint_Implementation() {
 		} else {
 			GetCharacterMovement()->MaxWalkSpeed /= 1.5;
 		}
-	}
+	} else { bSprinting = false; }
 }
 
 void ASCharacter::ThrowGrenade_Implementation() {
@@ -182,6 +187,7 @@ void ASCharacter::Melee_Implementation() {
 }
 
 void ASCharacter::UpdateBloodyHands_Implementation(float Health) {
+	if (!IsPlayerControlled()) return;
 	UMaterialInstanceDynamic* MI = MeshComp->CreateDynamicMaterialInstance(0);
 	if (MI) {
 		MeshComp->SetMaterial(0, MI);
@@ -194,17 +200,20 @@ void ASCharacter::OnHealthChanged(USHealthComponent* HealthComp, float Health, f
 	
 	UpdateBloodyHands(Health);
 	
-	UE_LOG(LogTemp, Error, TEXT("Health ==> %f"), Health);
-	
-	if (Health < 0.f && !bDead) {
+	if (Health <= 0.f && !bDead) {
 		bDead = true;
-
-		
-
 		GetMovementComponent()->StopMovementImmediately();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		PlayerWeapon->StopFire();
 		DetachFromControllerPendingDestroy();
+
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
+		SetActorEnableCollision(true);
+		GetMesh()->SetAllBodiesSimulatePhysics(true);
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->AddImpulse(GetMesh()->GetComponentLocation() + GetMesh()->GetForwardVector() * -100);
+		GetMesh()->WakeAllRigidBodies();
+		GetMesh()->bBlendPhysics = true;
 
 		SetLifeSpan(10.f);
 	}

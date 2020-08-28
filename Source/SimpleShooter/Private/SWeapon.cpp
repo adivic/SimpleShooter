@@ -2,6 +2,7 @@
 
 
 #include "SWeapon.h"
+#include "SimpleShooter/SimpleShooter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Sound/SoundCue.h"
 #include "Particles/ParticleSystem.h"
@@ -14,6 +15,7 @@
 #include "Components/SphereComponent.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Net/UnrealNetwork.h"
+#include "SPlayerState.h"
 
 // Sets default values
 ASWeapon::ASWeapon()
@@ -81,7 +83,7 @@ void ASWeapon::MultiFindAndPlayMontage_Implementation(const FString& MontageKey)
 	if (MontageToPlay) {
 		Delay = MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength);
 	}
-	if (MontageKey.Equals("Reload")) {
+	if (MontageKey.Equals("Reload") || MontageKey.Equals("ReloadEmpty")) {
 		FTimerHandle Handle;
 		GetWorldTimerManager().SetTimer(Handle, this, &ASWeapon::Reload, Delay);
 	}
@@ -91,17 +93,12 @@ void ASWeapon::ServerPlayMontage(const FString& Key) {
 	MultiFindAndPlayMontage(Key);
 }
 
-/*bool ASWeapon::ServerPlayMontage_Validate(const FString& Key) {
-	return !Key.IsEmpty();
-}*/
-
 void ASWeapon::BurstFire() {
 	if (Burst != 0) {
 		Fire();
 		FTimerDelegate RespawnDelegate = FTimerDelegate::CreateUObject(this, &ASWeapon::BurstFire);
 		GetWorldTimerManager().SetTimer(TimerHandle_FireHandle, RespawnDelegate, .1f, true);
 		--Burst;
-
 		return;
 	}
 	bIsFiring = false;
@@ -150,21 +147,41 @@ void ASWeapon::Fire() {
 		
 		FVector EndTrace = EyeLocation + (Direction * 10000.f);
 		FVector TraceEndPoint = EndTrace;
-		EPhysicalSurface SurfaceType = SurfaceType_Default;
+		EPhysicalSurface SurfaceType = EPhysicalSurface::SurfaceType_Default;
 		FHitResult Hit;
-		World->LineTraceSingleByChannel(Hit, EyeLocation, EndTrace, ECC_Visibility, Params);
-		if (Hit.bBlockingHit) {
+		if (World->LineTraceSingleByChannel(Hit, EyeLocation, EndTrace, ECC_Visibility, Params)) {
+			float DamageMultiplier = 1.f;
 			TraceEndPoint = Hit.ImpactPoint;
 			AActor* HitActor = Hit.GetActor();
 			SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
-
-			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage, Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
+			switch (SurfaceType) {
+				case SURFACE_HEAD: 
+					DamageMultiplier = 4;
+					break;
+				case SURFACE_UPPERBODY:
+					DamageMultiplier = 1.2f;
+					break;
+				case SURFACE_BODY: 
+					DamageMultiplier = 1.f;
+					break;
+				case SURFACE_ARMS:
+				case SURFACE_LEGS:
+					DamageMultiplier = .8f;
+					break;
+			}
+			//Score for hit
+			ASPlayerState* PS = Cast<ASPlayerState>(MyChar->GetPlayerState());
+			if(PS) {
+				PS->AddScore(10.f);
+			}
+			//UE_LOG(LogTemp, Warning, TEXT("Actual Damage = %.2f"), WeaponInfo.Damage * DamageMultiplier);
+			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage * DamageMultiplier , Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
 			//PlayImpactEffect(SurfaceType, Hit.ImpactPoint);
 		}
 
 		//Debug Line of fire
-		DrawDebugLine(World, EyeLocation, Hit.Location, FColor::Red, false, 5.f);
-		DrawDebugPoint(World, Hit.Location, 10, FColor::Red, false, 5.f);
+		//DrawDebugLine(World, EyeLocation, Hit.Location, FColor::Red, false, 5.f);
+		//DrawDebugPoint(World, Hit.Location, 10, FColor::Red, false, 5.f);
 		
 		//Trail Effect, Sound & Fire Animation
 		PlayFireEffects(TraceEndPoint);

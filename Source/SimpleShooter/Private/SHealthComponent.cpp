@@ -3,6 +3,7 @@
 
 #include "SHealthComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "SGameMode.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
 // Sets default values for this component's properties
@@ -37,20 +38,26 @@ void USHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, float Damage, 
 
 	Health = FMath::Clamp(Health - Damage, 0.f, DefaultHealth);
 
-	UE_LOG(LogTemp, Warning, TEXT("Health: %f \nDamage = %f"), Health, Damage);
+	//UE_LOG(LogTemp, Warning, TEXT("Health: %f \nDamage = %f"), Health, Damage);
 	bIsDead = Health <= 0.f;
 
 	OnHealthChanged.Broadcast(this, Health, Damage, DamageType, InstigatedBy, DamageCauser);
 
 	if (bIsDead) {
-		UE_LOG(LogTemp, Warning, TEXT("DEAD %f"), Health);
-		//GameMode logic
-		//Broadcast "ActorKilled"
+		//UE_LOG(LogTemp, Warning, TEXT("HealthCOmp///DEAD %f"), Health);
+		ASGameMode* GM = Cast<ASGameMode>(GetWorld()->GetAuthGameMode());
+		if(GM) {
+			GM->OnActorKilled.Broadcast(GetOwner(), DamageCauser, InstigatedBy);
+		}
 	}
 }
 
 float USHealthComponent::GetHealth() const {
 	return Health;
+}
+
+void USHealthComponent::SetIncreaseHealt(float HealthDelta) {
+	Health = DefaultHealth = HealthDelta;
 }
 
 void USHealthComponent::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const {
