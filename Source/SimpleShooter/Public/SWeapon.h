@@ -74,9 +74,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
 	USkeletalMeshComponent* MeshComp;
 
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Components)
-	//class USphereComponent* MeleeCheck;
-
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	class USoundCue* FiringSound;
 
@@ -88,9 +85,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
 	class UParticleSystem* PathEffect;
-
-	UPROPERTY(EditDefaultsOnly, Category = Weapon)
-	TMap<FString, class UAnimMontage*> GunMontages;
 
 	UPROPERTY(BlueprintReadOnly, Category = Weapon)
 	bool bIsFiring = false;
@@ -121,11 +115,17 @@ protected:
 
 	void PlayFireEffects(FVector TraceEnd);
 
-	void PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint);
-
 	void BurstFire();
 	
 	void FullAutoFire();
+
+	void PlayImpactEffect(EPhysicalSurface SurfaceType, FVector ImpactPoint);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
+	UParticleSystem* DefaultImpactEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Weapon)
+	UParticleSystem* BodyImpactEffect;
 
 public:	
 
@@ -141,6 +141,9 @@ public:
 	virtual void StopFire();
 
 	void ChangeFireMode();
+
+	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	class USWeaponDataAsset* WeaponData;
 
 	FORCEINLINE bool GetIsFiring() const { return bIsFiring; }
 

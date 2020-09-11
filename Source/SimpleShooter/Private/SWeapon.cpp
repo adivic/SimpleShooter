@@ -16,6 +16,7 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Net/UnrealNetwork.h"
 #include "SPlayerState.h"
+#include "SWeaponDataAsset.h"
 
 // Sets default values
 ASWeapon::ASWeapon()
@@ -56,7 +57,7 @@ bool ASWeapon::ServerFire_Validate() {
 
 void ASWeapon::OnRep_HitTrace() {
 	PlayFireEffects(HitTrace.TraceTo);
-	//SpawnImpactEffects(HitTrace.SurfaceType, HitTrace.TraceTo);
+	PlayImpactEffect(HitTrace.SurfaceType, HitTrace.TraceTo);
 }
 
 void ASWeapon::PlayFireEffects(FVector TraceEnd) {
@@ -73,12 +74,10 @@ void ASWeapon::PlayFireEffects(FVector TraceEnd) {
 		UGameplayStatics::PlaySoundAtLocation(this, FiringSound, MuzzleLocation);
 }
 
-void ASWeapon::PlayImpactEffects(EPhysicalSurface SurfaceType, FVector ImpactPoint) {
-	//TODO Add later
-}
-
 void ASWeapon::MultiFindAndPlayMontage_Implementation(const FString& MontageKey) {
-	auto MontageToPlay = GunMontages.Find(MontageKey);
+	if (!WeaponData) return;
+
+	auto MontageToPlay = WeaponData->GunMontages.Find(MontageKey);
 	float Delay;
 	if (MontageToPlay) {
 		Delay = MeshComp->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength);
@@ -170,16 +169,19 @@ void ASWeapon::Fire() {
 					break;
 			}
 			//Score for hit
-			ASPlayerState* PS = Cast<ASPlayerState>(MyChar->GetPlayerState());
-			if(PS) {
-				PS->AddScore(10.f);
+			ASCharacter* HitedActor = Cast<ASCharacter>(Hit.Actor);
+			if (HitedActor) {
+				ASPlayerState* PS = Cast<ASPlayerState>(MyChar->GetPlayerState());
+				if (PS) {
+					PS->AddScore(10.f);
+				}
 			}
 			//UE_LOG(LogTemp, Warning, TEXT("Actual Damage = %.2f"), WeaponInfo.Damage * DamageMultiplier);
 			UGameplayStatics::ApplyPointDamage(HitActor, WeaponInfo.Damage * DamageMultiplier , Direction, Hit, MyChar->GetInstigatorController(), MyChar, DamageType);
-			//PlayImpactEffect(SurfaceType, Hit.ImpactPoint);
+			PlayImpactEffect(SurfaceType, Hit.ImpactPoint);
 		}
 
-		//Debug Line of fire
+		//DEBUGGING
 		//DrawDebugLine(World, EyeLocation, Hit.Location, FColor::Red, false, 5.f);
 		//DrawDebugPoint(World, Hit.Location, 10, FColor::Red, false, 5.f);
 		
@@ -193,6 +195,29 @@ void ASWeapon::Fire() {
 			HitTrace.TraceTo = TraceEndPoint;
 			HitTrace.SurfaceType = SurfaceType;
 		}
+	}
+}
+
+void ASWeapon::PlayImpactEffect(EPhysicalSurface SurfaceType, FVector ImpactPoint) {
+	UParticleSystem* SelectedImpact = nullptr;
+
+	switch (SurfaceType) {
+		case SURFACE_HEAD:
+		case SURFACE_UPPERBODY:
+		case SURFACE_BODY:
+		case SURFACE_ARMS:
+		case SURFACE_LEGS:
+			SelectedImpact = BodyImpactEffect;
+			break;
+		default:
+			SelectedImpact = DefaultImpactEffect;
+	}
+
+	if (SelectedImpact) {
+		FVector Muzzle = MeshComp->GetSocketLocation("MuzzleSocket");
+		FVector ShotDirection = ImpactPoint - Muzzle;
+		ShotDirection.Normalize();
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), SelectedImpact, ImpactPoint, ShotDirection.Rotation());
 	}
 }
 

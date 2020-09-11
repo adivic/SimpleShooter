@@ -13,6 +13,7 @@
 #include "Components/PostProcessComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/CapsuleComponent.h"
+#include "SWeaponDataAsset.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
 // Sets default values
@@ -54,11 +55,16 @@ void ASCharacter::BeginPlay()
 	if (GetLocalRole() == ROLE_Authority) {
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		PlayerWeapon = GetWorld()->SpawnActor<ASWeapon>(WeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+		PlayerWeapon = GetWorld()->SpawnActor<ASWeapon>(PrimaryWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
 		if (PlayerWeapon) {
 			FName WeaponSocket = FName("R_GunSocket");
 			PlayerWeapon->SetOwner(this);
 			PlayerWeapon->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocket);
+		
+			if (PlayerWeapon->WeaponData) {
+				PlayerMontages.Empty();
+				PlayerMontages = PlayerWeapon->WeaponData->PlayerMontages;
+			}
 		}
 	}
 	SpringArm->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform, "head");
@@ -73,16 +79,15 @@ void ASCharacter::MoveRight(float speed) {
 }
 
 void ASCharacter::Crouch() {
-	if (!bSprinting) {
+	if (bSprinting) return;
+	if (!bIsCrouched)
 		ACharacter::Crouch();
-
-		if (bIsCrouched) {
-			UnCrouch();
-		}
-	}
+	else
+		ACharacter::UnCrouch();
 }
 
 void ASCharacter::Fire() {
+	if (bSprinting) return;
 	PlayerWeapon->StartFire();
 }
 
@@ -95,6 +100,7 @@ void ASCharacter::ChangeFireMode() {
 }
 
 void ASCharacter::ReloadWeapon_Implementation() {
+	if (bSprinting) return;
 	if (bReloading) { 
 		bReloading = false;
 		return; 
@@ -105,7 +111,7 @@ void ASCharacter::ReloadWeapon_Implementation() {
 		if (PlayerWeapon->CanReload() && bReloading) {
 			FTimerHandle TimerHandle_Reload;
 			FString GunName = PlayerWeapon->GetName();
-			float Delay = 2.5f; //TODO Get Delay From Animation
+			float Delay = 2.6f; //TODO Get Delay From Animation
 			if (PlayerWeapon->GetWeaponInfo().CurrentAmmo <= 0) {
 				ServerFindAndPlayMontage("Reload_Empty");
 				PlayerWeapon->ServerPlayMontage("ReloadEmpty");
@@ -115,6 +121,7 @@ void ASCharacter::ReloadWeapon_Implementation() {
 				PlayerWeapon->ServerPlayMontage("Reload");
 			}
 			bAiming = false;
+			bSprinting = false;
 			FTimerHandle Handle;
 			GetWorldTimerManager().SetTimer(Handle, this, &ASCharacter::ReloadWeapon, Delay);
 		}
@@ -125,26 +132,31 @@ void ASCharacter::ReloadWeapon_Implementation() {
 }
 
 void ASCharacter::Aim_Implementation() {
-	if (!bAiming && !bReloading && !bSprinting)
+	if (!bAiming || !bReloading || !bSprinting)
 		bAiming = !bAiming;
 	else
 		bAiming = false;
 }
 
 void ASCharacter::Sprint_Implementation() {
-	if (!bIsCrouched && !bAiming && !bReloading) {
-		bSprinting = !bSprinting;
+	if (bIsCrouched || bAiming || bReloading) return;
+	
+	FVector Vel = GetVelocity();
+	Vel.Normalize();
+	auto DotProduct = FVector::DotProduct(GetActorForwardVector(), Vel);
+	if (DotProduct <= 0) { bSprinting = false; return; }
+	bSprinting = true;
+	GetCharacterMovement()->MaxWalkSpeed *= 1.5;
+}
 
-		if (bSprinting) {
-			GetCharacterMovement()->MaxWalkSpeed *= 1.5;
-		} else {
-			GetCharacterMovement()->MaxWalkSpeed /= 1.5;
-		}
-	} else { bSprinting = false; }
+void ASCharacter::SprintStop_Implementation() {
+	if (!bSprinting) return;
+	bSprinting = false;
+	GetCharacterMovement()->MaxWalkSpeed /= 1.5;
 }
 
 void ASCharacter::ThrowGrenade_Implementation() {
-	ServerFindAndPlayMontage("Throwing");
+	ServerFindAndPlayMontage("Throw");
 	FTimerHandle Timer;
 	GetWorldTimerManager().SetTimer(Timer, this, &ASCharacter::SpawnGrenade, 0.45f);
 }
@@ -193,7 +205,6 @@ void ASCharacter::UpdateBloodyHands_Implementation(float Health) {
 		MeshComp->SetMaterial(0, MI);
 		MI->SetScalarParameterValue(TEXT("HealthValue"), 100 - Health);
 	}
-
 }
 
 void ASCharacter::OnHealthChanged(USHealthComponent* HealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser) {
@@ -214,6 +225,11 @@ void ASCharacter::OnHealthChanged(USHealthComponent* HealthComp, float Health, f
 		GetMesh()->AddImpulse(GetMesh()->GetComponentLocation() + GetMesh()->GetForwardVector() * -100);
 		GetMesh()->WakeAllRigidBodies();
 		GetMesh()->bBlendPhysics = true;
+
+		if (IsPlayerControlled()) {
+			GetMesh()->UnHideBoneByName("upperarm_r");
+			GetMesh()->UnHideBoneByName("upperarm_l");
+		}
 
 		SetLifeSpan(10.f);
 	}
@@ -252,7 +268,7 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAxis("LookUp", this, &ASCharacter::AddControllerPitchInput);
 
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ASCharacter::Crouch);
-	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASCharacter::Crouch);
+	//PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ASCharacter::Crouch);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
 
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ASCharacter::Fire);
@@ -260,7 +276,7 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Reload", IE_Pressed, this, &ASCharacter::ReloadWeapon);
 
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ASCharacter::Sprint);
-	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ASCharacter::Sprint);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ASCharacter::SprintStop);
 
 	PlayerInputComponent->BindAction("Aim", IE_Pressed, this, &ASCharacter::Aim);
 	PlayerInputComponent->BindAction("Aim", IE_Released, this, &ASCharacter::Aim);
@@ -268,6 +284,7 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("ChangeFireMode", IE_Pressed, this, &ASCharacter::ChangeFireMode);
 	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &ASCharacter::ThrowGrenade);
 	PlayerInputComponent->BindAction("Melee", IE_Pressed, this, &ASCharacter::Melee);
+	//PlayerInputComponent->BindAction("Switch", IE_Pressed, this, &ASCharacter::SwitchWeapon);
 }
 
 void ASCharacter::FlashbangEffect_Implementation(bool IsFlashed) {
@@ -286,5 +303,4 @@ void ASCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLif
 	DOREPLIFETIME(ASCharacter, bAiming);
 	DOREPLIFETIME(ASCharacter, bReloading);
 	DOREPLIFETIME(ASCharacter, bSprinting);
-
 }

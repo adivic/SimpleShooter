@@ -38,9 +38,9 @@ protected:
 	class ASWeapon* PlayerWeapon;
 
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
-	TSubclassOf<ASWeapon> WeaponClass;
+	TSubclassOf<ASWeapon> PrimaryWeaponClass;
 
-	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	UPROPERTY(BlueprintReadOnly, Category = Weapon)
 	TMap<FString, class UAnimMontage*> PlayerMontages;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = Player)
@@ -54,6 +54,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = Player)
 	bool bDead;
+
+	UPROPERTY(BlueprintReadOnly, Category = Player)
+	bool bSwitch = false;
 
 	UPROPERTY(BlueprintReadOnly, Category = Player)
 	FRotator AimPitch;
@@ -83,6 +86,9 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void Sprint();
+
+	UFUNCTION(Server, Reliable)
+	void SprintStop();
 
 	UFUNCTION(Server, Reliable)
 	void ThrowGrenade();
