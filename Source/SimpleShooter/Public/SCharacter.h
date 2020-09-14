@@ -37,6 +37,8 @@ protected:
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	class ASWeapon* PlayerWeapon;
 
+	FTimerHandle FireHandle;
+
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 	TSubclassOf<ASWeapon> PrimaryWeaponClass;
 
@@ -127,4 +129,9 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = Player)
 	bool bAiming = false;
+
+	UFUNCTION()
+	void FireAnimations();
+
+	void ClearAnimations()  { GetWorldTimerManager().ClearTimer(FireHandle); }
 };

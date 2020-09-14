@@ -14,6 +14,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Components/CapsuleComponent.h"
 #include "SWeaponDataAsset.h"
+#include "Camera/PlayerCameraManager.h"
+#include "Engine/DataTable.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
 // Sets default values
@@ -89,6 +91,7 @@ void ASCharacter::Crouch() {
 void ASCharacter::Fire() {
 	if (bSprinting) return;
 	PlayerWeapon->StartFire();
+	FireAnimations();
 }
 
 void ASCharacter::StopFire() {
@@ -210,6 +213,8 @@ void ASCharacter::UpdateBloodyHands_Implementation(float Health) {
 void ASCharacter::OnHealthChanged(USHealthComponent* HealthComp, float Health, float HealthDelta, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser) {
 	
 	UpdateBloodyHands(Health);
+
+	//UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->StartCameraFade(0, 0.5f, .8f, FLinearColor::Red);
 	
 	if (Health <= 0.f && !bDead) {
 		bDead = true;
@@ -285,6 +290,29 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &ASCharacter::ThrowGrenade);
 	PlayerInputComponent->BindAction("Melee", IE_Pressed, this, &ASCharacter::Melee);
 	//PlayerInputComponent->BindAction("Switch", IE_Pressed, this, &ASCharacter::SwitchWeapon);
+}
+
+void ASCharacter::FireAnimations() {
+	FString Key = bAiming ? "IronShoot" : "Shoot";
+	auto MontageToPlay = PlayerMontages.Find(Key + "1");
+	auto MontageToPlaySecond = PlayerMontages.Find(Key + "2");
+	float Delay;
+	if (MontageToPlay && MontageToPlaySecond) {
+		USkeletalMeshComponent* SkeletalMesh = Cast<USkeletalMeshComponent>(MeshComp);
+		if (SkeletalMesh) {
+			if (FMath::RandBool()) {
+				Delay = SkeletalMesh->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength);
+				if (PlayerWeapon->GetIsFiring()) {
+					GetWorldTimerManager().SetTimer(FireHandle, this, &ASCharacter::FireAnimations, Delay*0.7f , true);
+				}
+			} else {
+				Delay = SkeletalMesh->GetAnimInstance()->Montage_Play(*MontageToPlay, 1.f, EMontagePlayReturnType::MontageLength);
+				if (PlayerWeapon->GetIsFiring()) {
+					GetWorldTimerManager().SetTimer(FireHandle, this, &ASCharacter::FireAnimations, Delay*.7f, true);
+				}
+			}
+		}
+	}
 }
 
 void ASCharacter::FlashbangEffect_Implementation(bool IsFlashed) {

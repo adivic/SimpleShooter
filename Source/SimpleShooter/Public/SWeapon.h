@@ -145,6 +145,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = Weapon)
 	class USWeaponDataAsset* WeaponData;
 
+	EFireType GetFireMode() { return WeaponInfo.FireType; }
+
 	FORCEINLINE bool GetIsFiring() const { return bIsFiring; }
 
 	FORCEINLINE const FWeaponInfo& GetWeaponInfo() const { return WeaponInfo; }

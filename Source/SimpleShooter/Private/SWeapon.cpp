@@ -273,6 +273,9 @@ void ASWeapon::StopFire() {
 		bIsFiring = false;
 		GetWorldTimerManager().ClearTimer(TimerHandle_FireHandle);
 	}
+	ASCharacter* MyChar = Cast<ASCharacter>(GetOwner());
+	if (MyChar)
+		MyChar->ClearAnimations();
 }
 
 void ASWeapon::ChangeFireMode() {
